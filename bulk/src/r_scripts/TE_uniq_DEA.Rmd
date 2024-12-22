@@ -419,6 +419,7 @@ ggplot(targeted_FL_L1_DEA[which(targeted_FL_L1_DEA$genic == "genic"),], aes(x=ty
 # dev.off()
 ```
 
+Intersection of dysregulated FL-L1
 ```{r}
 library(UpSetR)
 # pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/hiPSC_crispri_DE_FL_L1HSPA8A.pdf", height = 4, width = 5)
