@@ -1,0 +1,452 @@
+# -*- coding: utf-8 -*-
+
+# lunarc configuration file
+# configuration file with sample list (yaml list)
+# "AA_Sai2_L1_CRISPRa_LV3776_c_S29" : "/projects/fs1/jakobssonlab/CTG_JGJSeq233_237_250_257_2023_145/230706_A00681_0891_AHGKYTDRX3/Data/Intensities/BaseCalls/",
+# "AA11_Sai2_lv3775_B_CRISPRa_S11" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+
+import os
+
+WD =  "/scale/gr01/shared/jjakobsson/backup/MN07_L1CRISPR/bulk/"
+CUTNRUN_WD = "/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/JGJseq303_304_307CoR/"
+configfile: "/scale/gr01/shared/jjakobsson/backup/MN07_L1CRISPR/bulk/src/config_files/samplesheet_L1crispr.json"
+
+SAMPLES = config["samples"]
+SAMPLES_CUTNRUN = config["samples_cutnrun"]
+SAMPLES_ORG = config["samples_org"]
+SAMPLES_ORG_LACZ = config["samples_org_lacz"]
+SAMPLES_HIPSC_CRISPRI = config["samples_hiPSC_crispri"]
+
+SAMPLES_WT_hiPSC = config["samples_WT_hiPSC"]
+#SAMPLES_CUTNRUN_WT_hiPSC_IGG = config["samples_cutnrun_WT_hiPSC_iggs"]
+SAMPLES_CUTNRUN_WT_hiPSC = config["samples_cutnrun_WT_hiPSC"]
+SAMPLES_CUTNRUN_WT_hiPSC_H3K4ME3 = config["samples_cutnrun_WT_hiPSC_H3K4me3"]
+
+geneGTF = "/scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/annotations/hg38/gencode/v38/gencode.v38.annotation.gtf"
+exonGTF = "/scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/annotations/hg38/gencode/v38/gencode.v38.basic.annotation.gtf"
+starIndex = "/scale/gr01/shared/jjakobsson/backup/raquelgg_fs5_jakobssonlab/GRCh38.p13_gencode.v38_STAR"
+teGTF = "/scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/annotations/hg38/rmsk/hg38_rmsk_TEtranscripts.gtf"
+teGTF_FL_L1_marked = "/scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/annotations/hg38/rmsk/hg38_rmsk_TEtranscripts_FL_L1_marked.gtf"
+
+# Run as:
+# snakemake -j 5 --cluster-config /scale/gr01/shared/jjakobsson/backup/MN07_L1CRISPR/bulk/src/config_files/lunarc_config.json --cluster "sbatch -A {cluster.account} -p {cluster.partition} --tasks-per-node {cluster.tasks-per-node}  -t {cluster.time} -o {cluster.output} -e {cluster.error} -J {cluster.job-name} -N {cluster.nodes}" --latency-wait 60
+
+rule all:
+    input: 
+        #os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_org_crispri_RNAseq_positive.mtx"),
+        #os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_WT_org_hiPSC_RNAseq_positive.mtx"),
+        #os.path.join(WD, "deeptools/FL_L1PAs/venn_FL_L1PAs_WT_hiPSC_LacZ_org_RNAseq_reverse.mtx"),
+        #os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_crispri_offtarget_RNAseq.mtx"),
+        #os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_crispri_hiPSC_RNAseq_positive.mtx"),
+        #os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_crispri_hiPSC_H3K4me3_cutnrun_RNAseq_positive.mtx")
+        expand(os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.out.bw"), sample=SAMPLES_ESC),
+        expand(os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.out.bw"), sample=SAMPLES_WT_hiPSC_EXTRA),
+ 
+rule uniquemapping:
+    input:
+        lambda wildcards: f"{config['samples'][wildcards.sample]}/{wildcards.sample}_R1_001.fastq.gz",
+        lambda wildcards: f"{config['samples'][wildcards.sample]}/{wildcards.sample}_R2_001.fastq.gz",
+        starIndex,
+        geneGTF
+    params:
+        prefix = os.path.join(WD, "map/unique/{sample}/{sample}_")
+    output:
+        os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.out.bam")
+    shell:
+        """
+        module purge
+        ml GCC/10.2.0 STAR/2.7.8a
+
+        #cp {input[0]} $SNIC_TMP
+        #cp {input[1]} $SNIC_TMP
+
+        STAR --runThreadN 10 \
+        --readFilesCommand gunzip -c \
+        --outSAMattributes All \
+        --outSAMtype BAM SortedByCoordinate \
+        --genomeDir {input[2]} \
+        --sjdbGTFfile {input[3]} \
+        --outFileNamePrefix {params.prefix} \
+        --outFilterMultimapNmax 1 \
+        --outFilterMismatchNoverLmax 0.03  \
+        --readFilesIn  {input[0]} {input[1]}
+
+        #mkdir -p {params.prefix}
+        #cp -r $SNIC_TMP/map/unique/{wildcards.sample}/{wildcards.sample}_* {params.prefix}
+
+        module purge
+        """
+
+rule multimapping:
+    input:
+        lambda wildcards: f"{config['samples'][wildcards.sample]}/{wildcards.sample}_R1_001.fastq.gz",
+        lambda wildcards: f"{config['samples'][wildcards.sample]}/{wildcards.sample}_R2_001.fastq.gz",
+        starIndex,
+        geneGTF
+    params:
+        prefix = os.path.join(WD, "map/multiple/{sample}/{sample}_")
+    output:
+        os.path.join(WD, "map/multiple/{sample}/{sample}_Aligned.sortedByCoord.out.bam")
+    shell:
+        """
+        module purge
+        ml GCC/10.2.0 STAR/2.7.8a
+
+        STAR --runThreadN 10 --readFilesCommand gunzip -c --outSAMattributes All --outSAMtype BAM SortedByCoordinate --sjdbGTFfile {input[3]} --genomeDir {input[2]} --outFileNamePrefix {params.prefix} --outFilterMultimapNmax 100 --winAnchorMultimapNmax 200 --readFilesIn {input[0]} {input[1]} 
+         
+        #mkdir -p {params.prefix}
+        #cp -r $SNIC_TMP/map/multiple/{wildcards.sample}/{wildcards.sample}_* {params.prefix}
+
+        module purge
+        """
+
+rule indexing:
+    input:
+        os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.out.bam")
+    output:
+        os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.out.bam.bai")
+    shell:
+        """
+        module purge
+        ml GCC/11.3.0 SAMtools/1.16.1
+        
+        samtools index -b {input}
+
+        module purge
+        """
+
+rule bigwig:
+    input:
+        os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.out.bam"),
+        os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.out.bam.bai")
+    output:
+        os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.out.bw"),
+        os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.forward.out.bw"),
+        os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.reverse.out.bw")
+    shell:
+        """
+        module purge
+        ml GCC/10.2.0  OpenMPI/4.0.5 deepTools/2.5.4
+        bamCoverage --normalizeUsingRPKM -b {input[0]} -o {output[0]}
+
+        bamCoverage --normalizeUsingRPKM --filterRNAstrand forward -b {input[0]} -o {output[1]}
+        bamCoverage --normalizeUsingRPKM --filterRNAstrand reverse -b {input[0]} -o {output[2]}
+
+        module purge
+        """
+
+rule gene_quantification:
+    input:
+        annotation = geneGTF,
+        sample = os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.out.bam")
+    output:
+        os.path.join(WD, "gene_counts/unique/{sample}_gene_count_matrix_2.csv")
+    shell:
+        """
+        module purge
+
+        module load subread/1.6.3-virt
+        subread-parse.sh featureCounts -p -F GTF -g gene_name -s 2 -a {input.annotation} -o {output} {input.sample}
+
+        module purge
+        """
+
+rule exon_quantification:
+    input:
+        annotation=exonGTF,
+        sample=os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.out.bam")
+    output: 
+        os.path.join(WD, "gene_counts/unique/{sample}_exon_count_matrix_2.csv")
+    shell:
+        """
+        module purge
+
+        module load subread/1.6.3-virt
+        subread-parse.sh featureCounts -p -F GTF -t exon -g exon_id -f -O -s 2 -T 20 -a {input.annotation} -o {output} {input.sample}
+
+        module purge
+        """
+
+
+rule TE_quantification:
+    input:
+        TEgtf = teGTF,
+        sample = os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.out.bam")
+    output:
+        os.path.join(WD, "TEcounts/unique/{sample}_TE_count_matrix_2.csv")
+    shell:
+        """
+        module purge
+
+        module load subread/1.6.3-virt
+        subread-parse.sh featureCounts -p -s 2 -F GTF -g transcript_id -a {input.TEgtf} -o {output} {input.sample}
+
+        module purge
+        """
+
+rule split_bam_strand:
+    input:
+        sample = os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.out.bam")
+    params:
+        forward1 = os.path.join(WD, "map/unique_strand/{sample}/{sample}_Aligned.sortedByCoord.forward1.out.bam"),
+        forward2 = os.path.join(WD, "map/unique_strand/{sample}/{sample}_Aligned.sortedByCoord.forward2.out.bam"),
+        rev1 = os.path.join(WD, "map/unique_strand/{sample}/{sample}_Aligned.sortedByCoord.reverse1.out.bam"),
+        rev2 = os.path.join(WD, "map/unique_strand/{sample}/{sample}_Aligned.sortedByCoord.reverse2.out.bam")
+    output:
+        forward = os.path.join(WD, "map/unique_strand/{sample}/{sample}_Aligned.sortedByCoord.forward.out.bam"),
+        rev = os.path.join(WD, "map/unique_strand/{sample}/{sample}_Aligned.sortedByCoord.reverse.out.bam")
+    shell:
+        """
+        module purge
+        ml GCC/11.3.0 SAMtools/1.16.1
+
+        samtools view -b -f 128 -F 16 {input.sample} > {params.forward1}
+        samtools view -b -f 80 {input.sample} > {params.forward2}
+        samtools merge -f {output.forward} {params.forward1} {params.forward2} 
+        samtools view -b -f 144 {input.sample} > {params.rev1}
+        samtools view -b -f 64 -F 16 {input.sample} > {params.rev2}
+        samtools merge -f {output.rev} {params.rev1} {params.rev2}
+
+        rm {params.rev1} {params.rev2}
+
+        """
+
+rule TE_quantification_strand:
+    input:
+        TEgtf = teGTF,
+        forward = os.path.join(WD, "map/unique_strand/{sample}/{sample}_Aligned.sortedByCoord.forward.out.bam"),
+        rev = os.path.join(WD, "map/unique_strand/{sample}/{sample}_Aligned.sortedByCoord.reverse.out.bam")
+    output:
+        os.path.join(WD, "TEcounts/unique_strand/{sample}_TE_count_matrix_0.csv")
+    shell:
+        """ 
+        module purge
+
+        module load subread/1.6.3-virt
+        subread-parse.sh featureCounts -p -s 0 -F GTF -g transcript_id -a {input.TEgtf} -o {output} {input.forward} {input.rev}
+
+        module purge
+        """
+
+rule TEcounts:
+    input:
+        bam = os.path.join(WD, "map/multiple/{sample}/{sample}_Aligned.sortedByCoord.out.bam"),
+        gtf = geneGTF,
+        TEgtf = teGTF_FL_L1_marked
+    params:
+        prefix = os.path.join(WD, "TEcounts/multiple/{sample}")
+    output:
+        os.path.join(WD, "TEcounts/multiple/{sample}.cntTable")
+    shell:
+        """
+        module purge
+        ml GCC/11.3.0  OpenMPI/4.1.4 TEtranscripts/2.2.3
+
+        TEcount -b {input.bam} --GTF {input.gtf} --TE {input.TEgtf} --stranded reverse --mode multi --project {params.prefix} --format BAM --sortByPos
+
+        module purge
+        """
+
+rule matrix_FL_L1PAs_WT_hiPSC_RNAseq:
+    input:
+        forward_strand = expand(os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.forward.out.bw"), sample=SAMPLES_WT_hiPSC),
+        reverse_strand = expand(os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.reverse.out.bw"), sample=SAMPLES_WT_hiPSC),
+        regions_positive_l1hs = "regions_positive_l1hs.bed",
+        regions_positive_l1pa2 = "regions_positive_l1pa2.bed",
+        regions_positive_l1pa3 = "regions_positive_l1pa3.bed",
+        regions_positive_l1pa4 = "regions_positive_l1pa4.bed",
+        regions_negative_l1hs = "regions_negative_l1hs.bed",
+        regions_negative_l1pa2 = "regions_negative_l1pa2.bed",
+        regions_negative_l1pa3 = "regions_negative_l1pa3.bed",
+        regions_negative_l1pa4 = "regions_negative_l1pa4.bed"
+    output:
+        positive = os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_WT_hiPSC_RNAseq_positive.mtx"),
+        negative = os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_WT_hiPSC_RNAseq_reverse.mtx")
+    shell:
+        """
+        module purge
+
+        ml GCC/11.3.0  OpenMPI/4.1.4 deepTools/3.5.2
+
+        computeMatrix scale-regions -R {input.regions_positive_l1hs} {input.regions_positive_l1pa2} {input.regions_positive_l1pa3} {input.regions_positive_l1pa4} -S {input.forward_strand} {input.reverse_strand} --regionBodyLength 6000 -b 6000 -a 6000 -o {output.positive}
+        computeMatrix scale-regions -R {input.regions_negative_l1hs} {input.regions_negative_l1pa2} {input.regions_negative_l1pa3} {input.regions_negative_l1pa4} -S {input.reverse_strand} {input.forward_strand} --regionBodyLength 6000 -b 6000 -a 6000 -o {output.negative}
+
+        """
+
+rule matrix_FL_L1PAs_crispri_hiPSC_H3K4me3_cutnrun_RNAseq:
+    input:
+        forward_strand = expand(os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.forward.out.bw"), sample=SAMPLES_HIPSC_CRISPRI), 
+        reverse_strand = expand(os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.reverse.out.bw"), sample=SAMPLES_HIPSC_CRISPRI), 
+        regions = os.path.join(WD, "results/tables/H3K4me3_tagdir_regions_merged_hiPS6_hiPS48_intersect_FL_L1PA_promoters.bed")
+    output:
+        positive = os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_crispri_hiPSC_H3K4me3_cutnrun_RNAseq_positive.mtx"),
+        negative = os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_crispri_hiPSC_H3K4me3_cutnrun_RNAseq_reverse.mtx")
+    shell:
+        """
+        ml GCC/10.2.0  OpenMPI/4.0.5 deepTools/2.5.4
+
+        awk '(NR>1)' {input.regions} | awk '{{if($6 == "+"){{print $7}}}}' | grep -f - L1HS_L1PA4_FL.bed > regions_positive.bed
+        awk '(NR>1)' {input.regions} | awk '{{if($6 == "-"){{print $7}}}}' | grep -f - L1HS_L1PA4_FL.bed > regions_negative.bed
+     
+        computeMatrix scale-regions -R regions_positive.bed -S {input.forward_strand} {input.reverse_strand} --regionBodyLength 6000 -b 6000 -a 6000 -o {output.positive}
+        computeMatrix scale-regions -R regions_negative.bed -S {input.reverse_strand} {input.forward_strand} --regionBodyLength 6000 -b 6000 -a 6000 -o {output.negative}
+        
+        """
+
+
+rule matrix_FL_L1PAs_crispri_hiPSC_RNAseq:
+    input:
+        forward_strand = expand(os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.forward.out.bw"), sample=SAMPLES_HIPSC_CRISPRI), 
+        reverse_strand = expand(os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.reverse.out.bw"), sample=SAMPLES_HIPSC_CRISPRI), 
+        regions_positive_l1hs = "regions_positive_l1hs_expressed_hiPS.bed",
+        regions_positive_l1pa2 = "regions_positive_l1pa2_expressed_hiPS.bed",
+        regions_positive_l1pa3 = "regions_positive_l1pa3_expressed_hiPS.bed",
+        regions_positive_l1pa4 = "regions_positive_l1pa4_expressed_hiPS.bed",
+        regions_negative_l1hs = "regions_negative_l1hs_expressed_hiPS.bed",
+        regions_negative_l1pa2 = "regions_negative_l1pa2_expressed_hiPS.bed",
+        regions_negative_l1pa3 = "regions_negative_l1pa3_expressed_hiPS.bed",
+        regions_negative_l1pa4 = "regions_negative_l1pa4_expressed_hiPS.bed"
+    output:
+        positive = os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_crispri_hiPSC_RNAseq_positive.mtx"),
+        negative = os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_crispri_hiPSC_RNAseq_reverse.mtx")
+    shell:
+        """
+        module purge
+
+        ml GCC/10.2.0  OpenMPI/4.0.5 deepTools/2.5.4
+
+        computeMatrix scale-regions -R {input.regions_positive_l1hs} {input.regions_positive_l1pa2} {input.regions_positive_l1pa3} {input.regions_positive_l1pa4} -S {input.forward_strand} {input.reverse_strand} --regionBodyLength 6000 -b 6000 -a 6000 -o {output.positive} 
+        computeMatrix scale-regions -R {input.regions_negative_l1hs} {input.regions_negative_l1pa2} {input.regions_negative_l1pa3} {input.regions_negative_l1pa4} -S {input.reverse_strand} {input.forward_strand} --regionBodyLength 6000 -b 6000 -a 6000 -o {output.negative} 
+        
+        """
+
+rule matrix_FL_L1PAs_WT_org_hiPSC_RNAseq:
+    input:
+        forward_strand_wt_hipsc = expand(os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.forward.out.bw"), sample=SAMPLES_WT_hiPSC),
+        reverse_strand_wt_hipsc = expand(os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.reverse.out.bw"), sample=SAMPLES_WT_hiPSC),
+        forward_strand_lacz_org = expand(os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.forward.out.bw"), sample=SAMPLES_ORG_LACZ), 
+        reverse_strand_lacz_org = expand(os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.reverse.out.bw"), sample=SAMPLES_ORG_LACZ), 
+        regions_positive_l1hs = "regions_positive_l1hs.bed",
+        regions_positive_l1pa2 = "regions_positive_l1pa2.bed",
+        regions_positive_l1pa3 = "regions_positive_l1pa3.bed",
+        regions_positive_l1pa4 = "regions_positive_l1pa4.bed",
+        regions_negative_l1hs = "regions_negative_l1hs.bed",
+        regions_negative_l1pa2 = "regions_negative_l1pa2.bed",
+        regions_negative_l1pa3 = "regions_negative_l1pa3.bed",
+        regions_negative_l1pa4 = "regions_negative_l1pa4.bed"
+    output:
+        positive = os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_WT_org_hiPSC_RNAseq_positive.mtx"),
+        negative = os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_WT_org_hiPSC_RNAseq_reverse.mtx"),
+    shell:
+        """
+        ml GCC/10.2.0  OpenMPI/4.0.5 deepTools/2.5.4
+        
+        computeMatrix scale-regions -R {input.regions_positive_l1hs} {input.regions_positive_l1pa2} {input.regions_positive_l1pa3} {input.regions_positive_l1pa4} -S {input.forward_strand_wt_hipsc} {input.forward_strand_lacz_org} {input.reverse_strand_wt_hipsc} {input.reverse_strand_lacz_org} --regionBodyLength 6000 -b 6000 -a 6000 -o {output.positive} 
+        computeMatrix scale-regions -R {input.regions_negative_l1hs} {input.regions_negative_l1pa2} {input.regions_negative_l1pa3} {input.regions_negative_l1pa4} -S {input.reverse_strand_wt_hipsc} {input.reverse_strand_lacz_org} {input.forward_strand_wt_hipsc} {input.forward_strand_lacz_org} --regionBodyLength 6000 -b 6000 -a 6000 -o {output.negative}
+        
+        """
+
+rule matrix_FL_L1PAs_org_crispri_RNAseq:
+    input:
+        forward_strand_org = expand(os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.forward.out.bw"), sample=SAMPLES_ORG), 
+        reverse_strand_org = expand(os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.reverse.out.bw"), sample=SAMPLES_ORG), 
+        regions_positive_l1hs = "regions_positive_l1hs_expressed_org.bed",
+        regions_positive_l1pa2 = "regions_positive_l1pa2_expressed_org.bed",
+        regions_positive_l1pa3 = "regions_positive_l1pa3_expressed_org.bed",
+        regions_positive_l1pa4 = "regions_positive_l1pa4_expressed_org.bed",
+        regions_negative_l1hs = "regions_negative_l1hs_expressed_org.bed",
+        regions_negative_l1pa2 = "regions_negative_l1pa2_expressed_org.bed",
+        regions_negative_l1pa3 = "regions_negative_l1pa3_expressed_org.bed",
+        regions_negative_l1pa4 = "regions_negative_l1pa4_expressed_org.bed"
+    output:
+        positive = os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_org_crispri_RNAseq_positive.mtx"),
+        negative = os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_org_crispri_RNAseq_reverse.mtx"),
+    shell:
+        """
+        ml GCC/10.2.0  OpenMPI/4.0.5 deepTools/2.5.4
+        
+        computeMatrix scale-regions -R {input.regions_positive_l1hs} {input.regions_positive_l1pa2} {input.regions_positive_l1pa3} {input.regions_positive_l1pa4} -S {input.forward_strand_org} {input.reverse_strand_org} --regionBodyLength 6000 -b 6000 -a 6000 -o {output.positive} 
+        computeMatrix scale-regions -R {input.regions_negative_l1hs} {input.regions_negative_l1pa2} {input.regions_negative_l1pa3} {input.regions_negative_l1pa4} -S {input.reverse_strand_org} {input.forward_strand_org} --regionBodyLength 6000 -b 6000 -a 6000 -o {output.negative}
+        
+        """
+
+
+rule matrix_FL_L1PAs_venn_RNAseq:
+    input:
+        forward_strand_hips = expand(os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.forward.out.bw"), sample=SAMPLES_WT_hiPSC), 
+        forward_strand_org = expand(os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.forward.out.bw"), sample=SAMPLES_ORG_LACZ), 
+        reverse_strand_hips = expand(os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.reverse.out.bw"), sample=SAMPLES_WT_hiPSC), 
+        reverse_strand_org = expand(os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.reverse.out.bw"), sample=SAMPLES_ORG_LACZ), 
+        regions_org_only="/scale/gr01/shared/jjakobsson/backup/MN07_L1CRISPR/bulk/results/tables/venn_diagram_LacZ_org_WT_hiPSC/FL_L1PA_LacZ_org_only.bed",
+        regions_hiPS_only="/scale/gr01/shared/jjakobsson/backup/MN07_L1CRISPR/bulk/results/tables/venn_diagram_LacZ_org_WT_hiPSC/FL_L1PA_WT_hiPSC_only.bed",
+        regions_both="/scale/gr01/shared/jjakobsson/backup/MN07_L1CRISPR/bulk/results/tables/venn_diagram_LacZ_org_WT_hiPSC/FL_L1PA_LacZ_org_WT_hiPSC.bed"
+    output:
+        positive = os.path.join(WD, "deeptools/FL_L1PAs/venn_FL_L1PAs_WT_hiPSC_LacZ_org_RNAseq_positive.mtx"),
+        negative = os.path.join(WD, "deeptools/FL_L1PAs/venn_FL_L1PAs_WT_hiPSC_LacZ_org_RNAseq_reverse.mtx")
+    shell:
+        """
+        org_only_negative=regions_org_only_negative.bed
+        org_only_positive=regions_org_only_positive.bed
+
+        hiPS_only_negative=regions_hiPS_only_negative.bed
+        hiPS_only_positive=regions_hiPS_only_positive.bed
+
+        both_negative=regions_both_negative.bed
+        both_positive=regions_both_positive.bed
+
+        awk '{{if($6 == "-"){{print $0}}}}' {input.regions_org_only} > $org_only_negative
+        awk '{{if($6 == "+"){{print $0}}}}' {input.regions_org_only} > $org_only_positive
+        
+        awk '{{if($6 == "-"){{print $0}}}}' {input.regions_hiPS_only} > $hiPS_only_negative
+        awk '{{if($6 == "+"){{print $0}}}}' {input.regions_hiPS_only} > $hiPS_only_positive
+        
+        awk '{{if($6 == "-"){{print $0}}}}' {input.regions_both} > $both_negative
+        awk '{{if($6 == "+"){{print $0}}}}' {input.regions_both} > $both_positive
+        
+        ml GCC/11.3.0  OpenMPI/4.1.4 deepTools/3.5.2
+        
+        computeMatrix scale-regions -R $org_only_positive $hiPS_only_positive $both_positive -S {input.forward_strand_hips} {input.forward_strand_org} {input.reverse_strand_hips} {input.reverse_strand_org} --regionBodyLength 6000 -b 6000 -a 6000 -o {output.positive} 
+        computeMatrix scale-regions -R $org_only_negative $hiPS_only_negative $both_negative -S {input.reverse_strand_hips} {input.reverse_strand_org} {input.forward_strand_hips} {input.forward_strand_org} --regionBodyLength 6000 -b 6000 -a 6000 -o {output.negative}
+        
+        """
+
+rule matrix_offtarget_crispri_RNAseq:
+    input:
+        bw = expand(os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.out.bw"), sample=SAMPLES_HIPSC_CRISPRI),
+        #cutnrun = expand(os.path.join(WD, "map/cutnrun/{sample}/{sample}_mapq10.bw"), sample=SAMPLES_CUTNRUN),
+        #lightXL = os.path.join(CUTNRUN_WD, "map/cutnrun/lightXL/AA_hiPS6_L1_CRISPRi_gRNA3_LV3824_lightXL_CUTnRUN_Cas9_S11_minus_AA_hiPS6_L1_CRISPRi_LacZ_LV3599_lightXL_CUTnRUN_Cas9_S10.bw"),
+        offregions = os.path.join(WD, "results/tables/lightXL_gRNA3_peaks_only_offtarget.bed")
+    output:
+        matrix = os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_crispri_offtarget_RNAseq.mtx"),
+    shell:
+        """
+        module purge
+        ml GCC/10.2.0  OpenMPI/4.0.5 deepTools/2.5.4
+        computeMatrix scale-regions -R {input.offregions} -S {input.bw} --regionBodyLength 100 -b 6000 -a 6000 -o {output.matrix}
+        
+        """
+
+rule matrix_housekeeping:
+    input:
+        forward_strand = expand(os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.forward.out.bw"), sample=SAMPLES),
+        reverse_strand = expand(os.path.join(WD, "map/unique/{sample}/{sample}_Aligned.sortedByCoord.reverse.out.bw"), sample=SAMPLES),
+        regions="/projects/fs3/jakobssonlab/annotations/hg38/rseqc/hg38.HouseKeepingGenes.bed"
+    output:
+        positive = os.path.join(WD, "deeptools/housekeeping/housekeeping_positive.mtx"),
+        negative= os.path.join(WD, "deeptools/housekeeping/housekeeping_negative.mtx")
+    shell:
+        """
+        negative=regions_negative_housekeeping.bed
+        positive=regions_positive_housekeeping.bed
+
+        awk '(NR>1)' {input.regions} | awk '{{if($6 == "-"){{print $0}}}}' > $negative
+        awk '(NR>1)' {input.regions} | awk '{{if($6 == "+"){{print $0}}}}' > $positive
+
+        ml GCC/10.2.0  OpenMPI/4.0.5 deepTools/2.5.4
+        computeMatrix scale-regions -R $positive -S {input.forward_strand} {input.reverse_strand}  -b 1000 -a 1000 -o {output.positive} 
+        computeMatrix scale-regions -R $negative -S {input.reverse_strand} {input.forward_strand}  -b 1000 -a 1000 -o {output.negative}
+
+        module purge
+        """
+
+

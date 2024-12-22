@@ -1,0 +1,368 @@
+# -*- coding: utf-8 -*-
+
+# lunarc configuration file
+# configuration file with sample list (yaml list)
+
+import os
+
+WD =  "/scale/gr01/shared/jjakobsson/backup/MN07_L1CRISPR/bulk/"
+configfile: "/scale/gr01/shared/jjakobsson/backup/MN07_L1CRISPR/bulk/src/config_files/samplesheet_L1crispr.json"
+
+CUTNRUN = config["samples_cutnrun"]
+CUTNRUN_PAIRED = config["cutnrun_paired"]
+
+SAMPLES_CUTNRUN_HISTONE_IGG = config["cutnrun_histone_igg"]
+SAMPLES_CUTNRUN_HISTONE = config["cutnrun_histone"]
+SAMPLES_CUTNRUN_FACTOR_IGG = config["cutnrun_factor_igg"]
+SAMPLES_CUTNRUN_FACTOR = config["cutnrun_factor"]
+SAMPLES_CUTNRUN_WT_hiPSC = config["samples_cutnrun_WT_hiPSC"]
+SAMPLES_CUTNRUN_WT_hiPSC_H3K4ME3 = config["samples_cutnrun_WT_hiPSC_H3K4me3"]
+#SAMPLES_CUTNRUN_DCAS9 = config["samples_cutnrun_dcas9"]
+SAMPLES_CUTNRUN_CRISPRI_H3K4ME3 = config["samples_cutnrun_crispri_H3K4me3"]
+SAMPLES_CUTNRUN_CRISPRI = config["samples_cutnrun_crispri"]
+
+geneGTF = "/projects/fs3/raquelgg/annotations/hg38/gencode/v38/gencode.v38.annotation.gtf"
+starIndex = "/projects/fs5/jakobssonlab/GRCh38.p13_gencode.v38_STAR"
+teGTF = "/projects/fs3/raquelgg/annotations/hg38/repeatmasker/hg38_rmsk_TEtranscripts.gtf"
+
+# Run as:
+# snakemake -j 5 --cluster-config /scale/gr01/shared/jjakobsson/backup/MN07_L1CRISPR/bulk/src/config_files/lunarc_config.json --cluster "sbatch -A {cluster.account} -p {cluster.partition} --tasks-per-node {cluster.tasks-per-node}  -t {cluster.time} -o {cluster.output} -e {cluster.error} -J {cluster.job-name} -N {cluster.nodes}" --latency-wait 60
+
+rule all:
+    input:
+        os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_crispri_dcas9.mtx")
+        #expand(os.path.join(WD, "map/cutnrun/{sample}/{sample}_mapq10.bw"), sample=CUTNRUN_PAIRED),
+        #expand(os.path.join(WD, "2_tagdirs/{sample}_tagdir/regions.txt"), sample = SAMPLES_CUTNRUN_HISTONE),
+        #expand(os.path.join(WD, "2_tagdirs/{sample}_tagdir/peaks.txt"), sample = SAMPLES_CUTNRUN_FACTOR),
+        #os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_WT_hiPSC_cutnrun_tss.mtx"),
+        #os.path.join(WD, "deeptools/cutnrun_controls/housekeeping_WT_hiPSC.mtx"),
+        #os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_crispri_offtarget_cutnrun.mtx"),
+        #os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_hiPSC_crispri_cutnrun.mtx")
+        #"hiPS48_H3K9me3_S26" : "hiPS48_IgG_S24",
+        #"hiPS6_H3K9me3_S23" : "hiPS6_IgG_S21",
+        #"AA_hiPS6_L1_CRISPRi_LV3824_H3K9me3_S24" : "AA_hiPS6_L1_CRISPRi_LV3824_IgG_S26",
+        #"AA_hiPS6_LacZ_CRISPRi_LV3599_H3K9me3_S21" : "AA_hiPS6_LacZ_CRISPRi_LV3599_IgG_S23",
+
+rule trim:
+    input:
+        lambda wildcards: f"{config['samples_cutnrun'][wildcards.sample]}/{wildcards.sample}_R1_001.fastq.gz",
+        lambda wildcards: f"{config['samples_cutnrun'][wildcards.sample]}/{wildcards.sample}_R2_001.fastq.gz"
+    output:
+        os.path.join(WD, "data/cutnrun/trimmed/{sample}_R1_001_TR.fastq.gz"),
+        os.path.join(WD, "data/cutnrun/trimmed/{sample}_R2_001_TR.fastq.gz"),
+    params:
+        outdir = os.path.join(WD, "data/cutnrun/trimmed/")
+    shell:
+        """
+        # ml GCCcore/10.3.0 cutadapt/3.4 # LUNARC for CRISPRi CUTNRUN and dCas9 CUTNRUN
+        # Local using 5.0 for WT hiPSCs
+        
+        mkdir -p {params.outdir}
+        cutadapt --version
+        cutadapt -q 10 -a AGATCGGAAGAG -A AGATCGGAAGAG -o {output[0]} -p {output[1]} {input[0]} {input[1]}
+
+        """
+
+rule fastqc:
+    input:
+        os.path.join(WD, "data/cutnrun/trimmed/{sample}_R1_001_TR.fastq.gz"),
+        os.path.join(WD, "data/cutnrun/trimmed/{sample}_R2_001_TR.fastq.gz"),
+    output:
+        os.path.join(WD, "data/cutnrun/trimmed/{sample}_R1_001_TR.fastqc.html"),
+        os.path.join(WD, "data/cutnrun/trimmed/{sample}_R2_001_TR.fastqc.html"),
+    shell:
+        """
+        ml fastqc/0.11.3
+        fastqc --version
+        fastqc {input}
+        """
+
+rule mapping:
+    input:
+        os.path.join(WD, "data/cutnrun/trimmed/{sample}_R1_001_TR.fastq.gz"),
+        os.path.join(WD, "data/cutnrun/trimmed/{sample}_R2_001_TR.fastq.gz"),
+    output:
+        os.path.join(WD, "map/cutnrun/{sample}/{sample}.sam")
+    params:
+        index="/scale/gr01/shared/common/genome/indicies/bowtie2/human/hg38/hg38",
+        parameters="--local --very-sensitive-local --no-unal --no-mixed --no-discordant --phred33 -I 10 -X 700" 
+    shell:
+        """
+#        ml GCC/10.3.0 Bowtie2/2.4.4
+        ml GCC/11.3.0 Bowtie2/2.4.5
+        bowtie2 {params.parameters} -x {params.index} -1 {input[0]} -2 {input[1]} -S {output}
+
+        module purge
+        """
+
+rule sam_to_bam:
+    input:
+        os.path.join(WD, "map/cutnrun/{sample}/{sample}.sam")
+    output:
+        filtered = os.path.join(WD, "map/cutnrun/{sample}/{sample}_mapq10.bam")
+    shell:
+        """
+        #ml GCC/7.3.0-2.30 SAMtools/1.9
+        ml GCC/11.3.0 SAMtools/1.16.1
+        
+        samtools view -bq 10 {input} > {output.filtered}
+
+        module purge
+        """
+
+rule sort:
+    input:
+        os.path.join(WD, "map/cutnrun/{sample}/{sample}_mapq10.bam")
+    output:
+        os.path.join(WD, "map/cutnrun/{sample}/{sample}_mapq10.sorted.bam")
+    shell:
+        """
+        ml GCC/11.3.0 SAMtools/1.16.1
+
+        samtools sort -o {output} {input}
+
+        module purge
+        """
+
+rule indexing:
+    input:
+        os.path.join(WD, "map/cutnrun/{sample}/{sample}_mapq10.sorted.bam")
+    output:
+        os.path.join(WD, "map/cutnrun/{sample}/{sample}_mapq10.sorted.bam.bai")
+    shell:
+        """
+        ml GCC/11.3.0 SAMtools/1.16.1
+
+        samtools index -b {input}
+
+        module purge
+        """
+
+rule bigwig:
+    input:
+        os.path.join(WD, "map/cutnrun/{sample}/{sample}_mapq10.sorted.bam.bai"),
+        bam = os.path.join(WD, "map/cutnrun/{sample}/{sample}_mapq10.sorted.bam")
+    output:
+        bw = os.path.join(WD, "map/cutnrun/{sample}/{sample}_mapq10.bw")
+    params:
+        normalize="normalizeUsing RPKM"
+    shell:
+        """
+        ml GCC/11.3.0  OpenMPI/4.1.4 deepTools/3.5.2
+
+        bamCoverage -b {input.bam} -o {output.bw} --{params.normalize}
+
+        module purge
+        """
+
+rule bigwig_normalization:
+    input:
+        lightXL_LacZ = os.path.join(WD, "map/cutnrun/AA_hiPS6_L1_CRISPRi_LacZ_LV3599_lightXL_CUTnRUN_Cas9_S10/AA_hiPS6_L1_CRISPRi_LacZ_LV3599_lightXL_CUTnRUN_Cas9_S10_mapq10.bw"),
+        lightXL_CRISPRi = os.path.join(WD, "map/cutnrun/AA_hiPS6_L1_CRISPRi_gRNA3_LV3824_lightXL_CUTnRUN_Cas9_S11/AA_hiPS6_L1_CRISPRi_gRNA3_LV3824_lightXL_CUTnRUN_Cas9_S11_mapq10.bw"),
+    output:
+        lightXL = os.path.join(WD, "map/cutnrun/lightXL/AA_hiPS6_L1_CRISPRi_gRNA3_LV3824_lightXL_CUTnRUN_Cas9_S11_minus_AA_hiPS6_L1_CRISPRi_LacZ_LV3599_lightXL_CUTnRUN_Cas9_S10.bw"),
+    shell:
+        """
+        ml GCC/10.2.0  OpenMPI/4.0.5 deepTools/2.5.4
+
+        bigwigCompare -b1 {input.lightXL_CRISPRi} -b2 {input.lightXL_LacZ} -o {output.lightXL} --ratio subtract
+
+        """
+
+rule bigwig_normalization_igg:
+    input:
+        hiPS6_h3k4me3 = os.path.join(WD, "map/cutnrun/hiPS6_H3K4me3_S22/hiPS6_H3K4me3_S22_mapq10.bw"),
+        hiPS6_igg = os.path.join(WD, "map/cutnrun/hiPS6_IgG_S21/hiPS6_IgG_S21_mapq10.bw"),
+        hiPS48_h3k4me3 = os.path.join(WD, "map/cutnrun/hiPS48_H3K4me3_S25/hiPS48_H3K4me3_S25_mapq10.bw"),
+        hiPS48_igg = os.path.join(WD, "map/cutnrun/hiPS48_IgG_S24/hiPS48_IgG_S24_mapq10.bw")
+    output:
+        hiPS6 = os.path.join(WD, "map/cutnrun/H3K4me3/hiPS6_H3K4me3_S22_minus_hiPS6_IgG_S21.bw"),
+        hiPS48 = os.path.join(WD, "map/cutnrun/H3K4me3/hiPS48_H3K4me3_S25_minus_hiPS48_IgG_S24.bw")
+    shell:
+        """
+        ml GCC/10.2.0  OpenMPI/4.0.5 deepTools/2.5.4
+
+        bigwigCompare -b1 {input.hiPS6_h3k4me3} -b2 {input.hiPS6_igg} -o {output.hiPS6} --ratio subtract
+        bigwigCompare -b1 {input.hiPS48_h3k4me3} -b2 {input.hiPS48_igg} -o {output.hiPS48} --ratio subtract
+
+        """
+
+rule make_tag_directory: 
+    input: 
+        os.path.join(WD, "map/cutnrun/{sample}/{sample}_mapq10.sorted.bam") 
+    output: 
+        os.path.join(WD, "2_tagdirs/{sample}_tagdir/tagInfo.txt") 
+    params: 
+        prefix = os.path.join(WD, "2_tagdirs/{sample}_tagdir") 
+    shell: 
+        """ 
+        module purge 
+        ml GCC/11.3.0  OpenMPI/4.1.4 Homer/2024-07 SAMtools/1.16.1 
+ 
+        makeTagDirectory {params.prefix} {input} 
+ 
+        module purge 
+        """ 
+ 
+def get_igg_tag(wildcards): 
+    return os.path.join(WD, ("2_tagdirs/" + CUTNRUN_PAIRED[wildcards.sample] + "_tagdir")) 
+ 
+rule peak_calling_histone: 
+    input: 
+        expand(os.path.join(WD, "2_tagdirs/{sample}_tagdir/tagInfo.txt"), sample=SAMPLES_CUTNRUN_HISTONE_IGG), 
+        os.path.join(WD, "2_tagdirs/{sample}_tagdir/tagInfo.txt"), 
+    output: 
+        os.path.join(WD, "2_tagdirs/{sample}_tagdir/regions.txt") 
+    params: 
+        tag_dirs = os.path.join(WD, "2_tagdirs/{sample}_tagdir"), 
+        tag_dirs_igg = get_igg_tag 
+    shell: 
+        """ 
+        module purge 
+        ml GCC/11.3.0  OpenMPI/4.1.4 Homer/2024-07 SAMtools/1.16.1 
+ 
+        findPeaks {params.tag_dirs} -style histone -fdr 0.05 -F 2 -o auto -i {params.tag_dirs_igg} 
+ 
+        module purge 
+        """
+
+rule peak_calling_dcas9: 
+    input: 
+        expand(os.path.join(WD, "2_tagdirs/{sample}_tagdir/tagInfo.txt"), sample=SAMPLES_CUTNRUN_FACTOR_IGG), 
+        os.path.join(WD, "2_tagdirs/{sample}_tagdir/tagInfo.txt"), 
+    output: 
+        os.path.join(WD, "2_tagdirs/{sample}_tagdir/peaks.txt") 
+    params: 
+        tag_dirs = os.path.join(WD, "2_tagdirs/{sample}_tagdir"), 
+        tag_dirs_igg = get_igg_tag 
+    shell: 
+        """ 
+        module purge 
+        ml GCC/11.3.0  OpenMPI/4.1.4 Homer/2024-07 SAMtools/1.16.1 
+ 
+        findPeaks {params.tag_dirs} -style factor -fdr 0.05 -F 2 -o auto -i {params.tag_dirs_igg} 
+ 
+        module purge 
+        """
+
+rule matrix_FL_L1PAs_hiPSC_WT_cutnrun:
+    input:
+        cutnrun = expand(os.path.join(WD, "map/cutnrun/{sample}/{sample}_mapq10.bw"), sample=SAMPLES_CUTNRUN_WT_hiPSC_H3K4ME3),
+        hiPS6 = os.path.join(WD, "map/cutnrun/H3K4me3/hiPS6_H3K4me3_S22_minus_hiPS6_IgG_S21.bw"),
+        hiPS48 = os.path.join(WD, "map/cutnrun/H3K4me3/hiPS48_H3K4me3_S25_minus_hiPS48_IgG_S24.bw"),
+        regions_l1hs = "L1HS_FL.bed",
+        regions_l1pa2 = "L1PA2_FL.bed",
+        regions_l1pa3 = "L1PA3_FL.bed",
+        regions_l1pa4 = "L1PA4_FL.bed",
+        regions = "L1HS_L1PA4_FL.bed"
+    output:
+        #os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_WT_hiPSC_cutnrun.mtx"),
+        #os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_WT_hiPSC_cutnrun_tss.mtx")
+        os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_WT_hiPSC_cutnrun_tss_pool.mtx")
+    shell:
+        """
+        ml GCC/10.2.0  OpenMPI/4.0.5 deepTools/2.5.4
+        
+        
+        computeMatrix reference-point --referencePoint TSS -R {input.regions} -S {input.cutnrun} {input.hiPS6} {input.hiPS48} -b 6000 -a 6000 -o {output}
+        """
+        #computeMatrix scale-regions -R {input.regions_l1hs} {input.regions_l1pa2} {input.regions_l1pa3} {input.regions_l1pa4} -S {input.cutnrun} {input.hiPS6} {input.hiPS48} --regionBodyLength 6000 -b 6000 -a 6000 -o {output[0]}
+        #computeMatrix reference-point --referencePoint TSS -R {input.regions_l1hs} {input.regions_l1pa2} {input.regions_l1pa3} {input.regions_l1pa4} -S {input.cutnrun} {input.hiPS6} {input.hiPS48} -b 6000 -a 6000 -o {output[2]}
+
+rule matrix_FL_L1PAs_hiPSC_WT_H3K4me3_cutnrun:
+    input:
+        cutnrun = expand(os.path.join(WD, "map/cutnrun/{sample}/{sample}_mapq10.bw"), sample=SAMPLES_CUTNRUN_WT_hiPSC_H3K4ME3),
+        hiPS6 = os.path.join(WD, "map/cutnrun/H3K4me3/hiPS6_H3K4me3_S22_minus_hiPS6_IgG_S21.bw"),
+        hiPS48 = os.path.join(WD, "map/cutnrun/H3K4me3/hiPS48_H3K4me3_S25_minus_hiPS48_IgG_S24.bw"),
+        regions = os.path.join(WD, "results/tables/H3K4me3_tagdir_regions_merged_hiPS6_hiPS48_intersect_FL_L1PA_promoters.bed")
+    output:
+        os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_WT_hiPSC_H3K4me3_cutnrun.mtx")
+    shell:
+        """
+        ml GCC/10.2.0  OpenMPI/4.0.5 deepTools/2.5.4
+        
+        computeMatrix scale-regions -R {input.regions} -S {input.cutnrun} {input.hiPS6} {input.hiPS48} --regionBodyLength 100 -b 6000 -a 6000 -o {output}
+        
+        """
+
+rule matrix_cutnrun_controls:
+    input:
+        cutnrun = expand(os.path.join(WD, "map/cutnrun/{sample}/{sample}_mapq10.bw"), sample=SAMPLES_CUTNRUN_WT_hiPSC),
+        regions_PCDH="/scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/annotations/hg38/gencode/v38/gencode.v38.basic.annotation.PCDH.bed",
+        regions_HK="/scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/annotations/hg38/rseqc/hg38.HouseKeepingGenes.bed"
+    output:
+        housekeeping = os.path.join(WD, "deeptools/cutnrun_controls/housekeeping_WT_hiPSC.mtx"),
+        pcdh = os.path.join(WD, "deeptools/cutnrun_controls/pcdh_WT_hiPSC.mtx")
+    shell:
+        """
+        module purge
+
+        ml GCC/10.2.0  OpenMPI/4.0.5 deepTools/2.5.4
+
+        computeMatrix scale-regions -m 2000 -R {input.regions_PCDH} -S {input.cutnrun} -b 5000 -a 5000 -o {output.pcdh}
+
+        computeMatrix reference-point --referencePoint TSS -R {input.regions_HK} -S {input.cutnrun} -b 2000 -a 5000 -o {output.housekeeping}
+        """
+
+rule matrix_FL_L1PAs_hiPSC_crispri_dCas9:
+    input:
+        lightXL = os.path.join(WD, "map/cutnrun/lightXL/AA_hiPS6_L1_CRISPRi_gRNA3_LV3824_lightXL_CUTnRUN_Cas9_S11_minus_AA_hiPS6_L1_CRISPRi_LacZ_LV3599_lightXL_CUTnRUN_Cas9_S10.bw"),
+        regions=os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_crispri_hiPSC_RNAseq_fig3.tab"),
+    output:
+        matrix = os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_crispri_dcas9.mtx")
+    shell:
+        """
+        module purge
+        
+        ml GCC/10.2.0  OpenMPI/4.0.5 deepTools/2.5.4
+        computeMatrix scale-regions -R {input.regions} -S {input.lightXL} --regionBodyLength 6000 -b 6000 -a 6000 -o {output.matrix}
+        
+        """
+
+rule matrix_offtarget_crispri:
+    input:
+        cutnrun = expand(os.path.join(WD, "map/cutnrun/{sample}/{sample}_mapq10.bw"), sample=SAMPLES_CUTNRUN_CRISPRI),
+        lightXL = os.path.join(WD, "map/cutnrun/lightXL/AA_hiPS6_L1_CRISPRi_gRNA3_LV3824_lightXL_CUTnRUN_Cas9_S11_minus_AA_hiPS6_L1_CRISPRi_LacZ_LV3599_lightXL_CUTnRUN_Cas9_S10.bw"),
+        L1PA_regions="/scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/annotations/hg38/rmsk/hg38.fa.fulllength.L1HS_L1PA.bed",
+        gRNA3 = os.path.join(WD, "2_tagdirs/AA_hiPS6_L1_CRISPRi_gRNA3_LV3824_lightXL_CUTnRUN_Cas9_S11_peaks.bed"),
+        LacZ = os.path.join(WD, "2_tagdirs/AA_hiPS6_L1_CRISPRi_LacZ_LV3599_lightXL_CUTnRUN_Cas9_S10_peaks.bed")
+    output:
+        offregions = os.path.join(WD, "results/tables/lightXL_gRNA3_peaks_only_offtarget.bed"),
+        matrix = os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_crispri_offtarget_cutnrun.mtx")
+    shell:
+        """
+        module purge
+        
+        ml GCC/12.3.0 BEDTools/2.31.0 
+        bedtools intersect -a {input.gRNA3} -b {input.LacZ} -v | bedtools intersect -a stdin -b {input.L1PA_regions} -v > {output.offregions}
+
+        ml GCC/10.2.0  OpenMPI/4.0.5 deepTools/2.5.4
+        computeMatrix scale-regions -R {output.offregions} -S {input.lightXL} {input.cutnrun} --regionBodyLength 100 -b 6000 -a 6000 -o {output.matrix}
+        
+        """
+#grep -w 'chr[1-9]\|chr1[0-9]\|chr2[0-2]\|chrX\|chrY\|chrM' {input.gRNA3} | awk '{{print $2,$3,$4,".",".",$5}}' OFS="\t" > {output.gRNA3}
+#        grep -w 'chr[1-9]\|chr1[0-9]\|chr2[0-2]\|chrX\|chrY\|chrM' {input.LacZ} | awk '{{print $2,$3,$4,".",".",$5}}' OFS="\t" > {output.LacZ}
+        
+
+
+rule matrix_FL_L1PAs_hiPSC_crispri_cutnrun:
+    input:
+        cutnrun = expand(os.path.join(WD, "map/cutnrun/{sample}/{sample}_mapq10.bw"), sample=SAMPLES_CUTNRUN_CRISPRI_H3K4ME3),
+        lightXL = os.path.join(WD, "map/cutnrun/lightXL/AA_hiPS6_L1_CRISPRi_gRNA3_LV3824_lightXL_CUTnRUN_Cas9_S11_minus_AA_hiPS6_L1_CRISPRi_LacZ_LV3599_lightXL_CUTnRUN_Cas9_S10.bw"),
+        regions_l1hs = "L1HS_FL.bed",
+        regions_l1pa2 = "L1PA2_FL.bed",
+        regions_l1pa3 = "L1PA3_FL.bed",
+        regions_l1pa4 = "L1PA4_FL.bed",
+        regions = os.path.join(WD, "results/tables/H3K4me3_tagdir_regions_merged_hiPS6_hiPS48_intersect_FL_L1PA_promoters.bed")
+    output:
+        os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_hiPSC_crispri_cutnrun.mtx"),
+        os.path.join(WD, "deeptools/FL_L1PAs/FL_L1PAs_hiPSC_crispri_H3K4me3_cutnrun.mtx")
+    shell:
+        """
+        module purge
+        ml GCC/10.2.0  OpenMPI/4.0.5 deepTools/2.5.4
+        
+        computeMatrix scale-regions -R {input.regions} -S {input.lightXL} {input.cutnrun} --regionBodyLength 100 -b 6000 -a 6000 -o {output[1]}
+        computeMatrix scale-regions -R {input.regions_l1hs} {input.regions_l1pa2} {input.regions_l1pa3} {input.regions_l1pa4} -S {input.lightXL} {input.cutnrun} --regionBodyLength 6000 -b 6000 -a 6000 -o {output[0]}
+        """
+
