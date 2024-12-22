@@ -1,0 +1,382 @@
+---
+title: "L1-CRISPRi organoids: Cell typing"
+output: html_notebook
+---
+
+This markdown relates to the visualization of day 15 cerebral organoids.
+
+Main questions:
+1. Cell type composition
+2. Nuclei composition between conditions
+3. Do L1-CRISPRi and control organoids significantly differ in cell type composition?
+4. What are the consistently downregulated genes (mostly on-target)? Are they enriched in any specific biological processes?
+5. What are the consistently upregulated genes (off-target)? Are they enriched in any specific biological processes?
+
+## Read data and add metadata
+
+```{r}
+library(data.table)
+library(Seurat)
+library(tidyverse)
+library(stringr)
+library(openxlsx)
+library(UpSetR)
+library(RColorBrewer)
+library(ggplot2)
+library(ggpubr)
+
+crispri_org <- readRDS("/Volumes/MyPassport/CRISPRi_L1s/10X/crispri.rds")
+
+samples_metadata <- fread("/Volumes/MyPassport/CRISPRi_L1s/10X/metadata.tab", data.table = F)
+metadata <- FetchData(crispri_org, "orig.ident")
+metadata$barcode <- rownames(metadata)
+metadata <- merge(metadata, samples_metadata, by.y="sample", by.x="orig.ident")
+rownames(metadata) <- metadata$barcode
+crispri_org <- AddMetaData(crispri_org, metadata[,c("guide", "batch", "cell_line", "seqnum")], col.name = c("condition", "batch", "cell_line", "seqnum"))
+
+# Number of counts per nuclei
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/nCount_sample.pdf", height = 12)
+VlnPlot(crispri_org, c("nCount_RNA"), group.by = "orig.ident") + theme(legend.position = "None")
+# dev.off()
+
+getPalette = colorRampPalette(brewer.pal(8, "Pastel1"))
+crispri_org_split <- list()
+dim_plots <- list()
+for(i in unique(crispri_org$orig.ident)) crispri_org_split[[i]] <- subset(crispri_org, subset = orig.ident == i)
+for(i in unique(crispri_org$orig.ident)) dim_plots[[i]] <- DimPlot(crispri_org_split[[i]], label = T, cols = getPalette(22)) & ggtitle(paste(unique(crispri_org_split[[i]]$cell_line), unique(crispri_org_split[[i]]$condition), "batch", unique(crispri_org_split[[i]]$batch))) & theme_bw() & theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(), axis.title=element_blank(), axis.text=element_blank(), axis.ticks=element_blank())
+
+# UMAP per condition / batch
+# 1. All nuclei together
+# 2. Each experiment
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/umap_org_L1CRISPRi.pdf", height = 4, width = 5)
+DimPlot(crispri_org, label = T, cols = getPalette(22)) & ggtitle("All organoids samples") & theme_bw() & theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(), axis.title=element_blank(), axis.text=element_blank(), axis.ticks=element_blank())
+
+dim_plots
+# dev.off()
+
+# Nuclei coming from hiPS6 CRISPRi using gRNA1
+tmp <- subset(crispri_org, cell_line == "hiPS6" & condition %in% c("gRNA3", "LacZ"))
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/umap_org_L1CRISPRi_g3.pdf", height = 4, width = 5)
+DimPlot(tmp, label = T, cols = getPalette(22)) & ggtitle("All organoids samples") & theme_bw() & theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(), axis.title=element_blank(), axis.text=element_blank(), axis.ticks=element_blank())
+# dev.off()
+
+# Nuclei coming from hiPS48 CRISPRi using gRNA1
+tmp <- subset(crispri_org, cell_line == "hiPS48" & condition %in% c("gRNA3", "LacZ"))
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/umap_org_L1CRISPRi_hiPS48_g3_lacz.pdf", height = 4, width = 5)
+DimPlot(tmp, label = T, cols = getPalette(22)) & ggtitle("All organoids samples (hiPS48)") & theme_bw() & theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(), axis.title=element_blank(), axis.text=element_blank(), axis.ticks=element_blank())
+# dev.off()
+
+# Nuclei coming from hiPS48 LacZ only
+tmp <- subset(crispri_org, cell_line == "hiPS48" & condition %in% c("LacZ"))
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/umap_org_L1CRISPRi_hiPS48_lacz.pdf", height = 4, width = 5)
+DimPlot(tmp, label = T, cols = getPalette(22)) & ggtitle("LacZ hiPS48") & theme_bw() & theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(), axis.title=element_blank(), axis.text=element_blank(), axis.ticks=element_blank())
+# dev.off()
+
+# Nuclei coming from hiPS6 LacZ only
+tmp <- subset(crispri_org, cell_line == "hiPS6" & condition %in% c("LacZ"))
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/umap_org_L1CRISPRi_hiPS6_lacz.pdf", height = 4, width = 5)
+DimPlot(tmp, label = T, cols = getPalette(22)) & ggtitle("LacZ hiPS6") & theme_bw() & theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(), axis.title=element_blank(), axis.text=element_blank(), axis.ticks=element_blank())
+# dev.off()
+```
+
+## Bio markers
+
+Sort nuclei based on expression
+```{r}
+neuronal <- c("DCX")
+deeplayer <- c("TBR1", "BCL11B")
+interneurons <- c("GAD1", "DLX2")
+cajalretzius <- c("RELN")
+proliferating <- c("PAX6", "SOX2", "PCNA")
+basalprog <- c("EOMES") 
+microglia <- c("AIF1", "TMEM119")
+markers <- unique(c(neuronal, deeplayer, interneurons, cajalretzius, proliferating, basalprog, microglia))
+
+library(dplyr)
+# Sorts nuclei based on expression so that we dont miss to see the expression by overlapping points
+featureplot_sort_points <- function(df, gene, split = NA){
+  df <- df %>% 
+    drop_na(gene)
+  minimum = min(df[,gene])
+  maximum = max(df[,gene])
+  
+  plt <- df %>%
+    arrange(get(gene)) %>%
+    ggplot(aes(x=umap_1, y=umap_2, color=get(gene))) + geom_point(size=0.3) + theme_bw() + 
+    scale_colour_gradient2(limits = c(minimum, maximum), high = "#1e386c", low = "#bfdbf0", mid = "#0394cb", midpoint = maximum/2) +
+    labs(color = gene) +
+    ggtitle(gene) +
+    theme(axis.line = element_line(colour = "lightgrey"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_rect(colour = "lightgrey", fill=NA),
+          panel.background = element_blank(),
+          axis.title=element_blank(),
+          axis.text=element_blank(),
+          axis.ticks=element_blank(),
+          plot.title = element_text(face = "bold"))
+  
+  if(!is.na(split)){
+    plt <- plt + facet_wrap(.~get(split), ncol=5)
+  }
+  return(plt)
+}
+
+markers_crispri_org <- FetchData(crispri_org, c("umap_1", "umap_2", "SOX2", "NES", "RBFOX3", "NCAM1", "PAX6", "EOMES", "FOXG1", "EMX1"))
+
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/crispri_org_markers_featureplot.pdf", width = 14, height = 6)
+ggarrange(featureplot_sort_points(markers_crispri_org, "SOX2"),
+featureplot_sort_points(markers_crispri_org, "NES"),
+featureplot_sort_points(markers_crispri_org, "RBFOX3"),
+featureplot_sort_points(markers_crispri_org, "NCAM1"),
+featureplot_sort_points(markers_crispri_org, "PAX6"),
+featureplot_sort_points(markers_crispri_org, "EOMES"),
+featureplot_sort_points(markers_crispri_org, "FOXG1"),
+featureplot_sort_points(markers_crispri_org, "EMX1"), ncol=4, nrow=2)
+# dev.off()
+
+# Using only hiPS6 CRISPRi gRNA1
+tmp <- subset(crispri_org, cell_line == "hiPS6" & condition %in% c("gRNA3", "LacZ"))
+examples_crispri_org <- FetchData(tmp, c("umap_1", "umap_2", "condition", "ENPEP", "CTNNA3", "KIAA1324L", "LINC00648", "NTRK2"))
+```
+
+## L1-derived gene examples (featureplots)
+```{r}
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/crispri_org_examples_featureplot.pdf", width = 7, height = 3.5)
+featureplot_sort_points(examples_crispri_org, "NTRK2", split = "condition")
+featureplot_sort_points(examples_crispri_org, "KIAA1324L", split = "condition")
+featureplot_sort_points(examples_crispri_org, "LINC00648", split = "condition")
+featureplot_sort_points(examples_crispri_org, "ENPEP", split = "condition")
+featureplot_sort_points(examples_crispri_org, "CTNNA3", split = "condition")
+# dev.off()
+```
+
+## Examples of upregulated genes among all experiments (violins)
+```{r}
+examples_crispri_upreg <- reshape2::melt(FetchData(crispri_org_join, c("NTRK2", "PTX3", "PDE4B", "NR2E1", "SCN3A","cell_line", "condition", "seurat_clusters", "condition_cell_line_cluster_batch"))) %>% 
+  filter(value > 0) %>% 
+  filter(seurat_clusters %in% c("0", "1"))
+examples_crispri_upreg$condition <- factor(examples_crispri_upreg$condition, levels=c("LacZ", "gRNA3", "gRNA1"))
+examples_crispri_upreg$seurat_clusters <- factor(examples_crispri_upreg$seurat_clusters, levels=c("0", "1"))
+
+violin_padj <- function(df, gene){
+  return(df %>% 
+  filter(variable == gene) %>% 
+  ggplot(aes(x=condition, y=value, fill=condition, color=condition)) + geom_jitter(height = 0, width = 0.2, alpha=0.7, size = 0.1) +
+    geom_violin(alpha=0.5, color="black") + 
+  geom_boxplot(color="black", width=0.2, outliers = F) +
+  facet_wrap(seurat_clusters~cell_line, ncol=9, scales = "free_x") +
+   theme_bw()+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
+    scale_color_manual(values = c("LacZ" = "grey",
+                                  "gRNA3" = "#c8a4cd",
+                                  "gRNA1" = "#9b67a3")) +
+    scale_fill_manual(values = c("LacZ" = "grey",
+                                  "gRNA3" = "#c8a4cd",
+                                  "gRNA1" = "#9b67a3")) +
+    ggtitle(gene) + labs(x="", y="Normalized Expression"))
+}
+
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/violin_upreg_genes_cluster_0_1.pdf", height = 3)
+violin_padj(examples_crispri_upreg, "NTRK2")
+violin_padj(examples_crispri_upreg, "PTX3")
+violin_padj(examples_crispri_upreg, "NR2E1")
+violin_padj(examples_crispri_upreg, "SCN3A")
+violin_padj(examples_crispri_upreg, "PDE4B")
+# dev.off()
+```
+
+## Add metadata 
+### Cell type
+### Batch
+### Condition
+### Cell line
+```{r}
+coldata_celltypes <- reshape2::melt(list("NPCs" = as.character(c(0:2, 7)),
+                    "Early neurons" = as.character(c(4,5)),
+                    "Endothelial" = as.character(c(3,6))))
+
+### ADD to metadata
+clusters_per_cell <- FetchData(crispri_org, "seurat_clusters")
+clusters_per_cell$barcode <- rownames(clusters_per_cell)
+celltypes_per_cell <- merge(coldata_celltypes, clusters_per_cell, by.x="value", by.y="seurat_clusters")
+colnames(celltypes_per_cell)[2] <- "celltype"
+rownames(celltypes_per_cell) <- celltypes_per_cell$barcode
+crispri_org <- AddMetaData(crispri_org, metadata = celltypes_per_cell[,c("celltype"), drop=F], col.name = "celltype")
+
+cellline_per_cell <- FetchData(crispri_org, c("condition", "cell_line", "batch", "celltype"))
+cellline_per_cell$barcode <- rownames(cellline_per_cell)
+cellline_per_cell$condition_cell_line <- paste(cellline_per_cell$condition, cellline_per_cell$cell_line, sep="_")
+cellline_per_cell$condition_celltype <- paste(cellline_per_cell$condition, cellline_per_cell$celltype, sep="_")
+cellline_per_cell$condition_cell_line_batch <- paste(cellline_per_cell$condition, cellline_per_cell$cell_line, cellline_per_cell$batch, sep="_")
+crispri_org <- AddMetaData(crispri_org, metadata = cellline_per_cell[,c("condition_cell_line", "condition_cell_line_batch", "condition_celltype"), drop=F], col.name = c("condition_cell_line", "condition_cell_line_batch", "condition_celltype"))
+```
+
+## Plot UMAP coloured by cell type
+```{r}
+# Only on hiPS6 LacZ (fig 5c)
+tmp <- subset(crispri_org, cell_line == "hiPS6" & condition == "LacZ")
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/umap_crispri_org_celltypes_lacz.pdf", width = 4.2, height = 3)
+DimPlot(tmp, group.by = "celltype") & theme_bw() & 
+    theme(axis.line = element_line(colour = "lightgrey"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_rect(colour = "lightgrey", fill=NA),
+          panel.background = element_blank(),
+          axis.title=element_blank(),
+          axis.text=element_blank(),
+          axis.ticks=element_blank(),
+          plot.title = element_text(face = "bold")) & ggtitle("LacZ hiPS6 cell types")
+# dev.off()
+
+# Ratio of nuclei per cell type in hiPS6 LacZ
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/bar_ratio_crispri_org_celltypes_lacz.pdf", width = 4, height = 3)
+FetchData(tmp, "celltype") %>% 
+  ggplot(aes(x="LacZ", fill=celltype)) + geom_bar(stat="count", position="fill") + theme_bw() + labs(y="Ratio", x="", fill="Cell types")
+# dev.off()
+
+# Only on hiPS6 LacZ (supp fig 5b)
+tmp <- subset(crispri_org, cell_line == "hiPS48" & condition == "LacZ")
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/umap_crispri_org_celltypes_hiPS48_lacz.pdf", width = 4.2, height = 3)
+DimPlot(tmp, group.by = "celltype") & theme_bw() & 
+    theme(axis.line = element_line(colour = "lightgrey"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_rect(colour = "lightgrey", fill=NA),
+          panel.background = element_blank(),
+          axis.title=element_blank(),
+          axis.text=element_blank(),
+          axis.ticks=element_blank(),
+          plot.title = element_text(face = "bold")) & ggtitle("LacZ hiPS48 cell types")
+# dev.off()
+
+# Ratio of nuclei per cell type in hiPS48 LacZ
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/bar_ratio_crispri_org_celltypes_hiPS48_lacz.pdf", width = 4, height = 3)
+FetchData(tmp, "celltype") %>% 
+  ggplot(aes(x="LacZ", fill=celltype)) + geom_bar(stat="count", position="fill") + theme_bw() + labs(y="Ratio", x="", fill="Cell types")
+# dev.off()
+
+```
+
+## UMAP split or coloured by condition 
+```{r}
+# On hiPS6 experiments
+tmp <- subset(crispri_org, cell_line == "hiPS6" & condition %in% c("LacZ", "gRNA3"))
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/umap_crispri_org_celltypes_hips6.pdf", width = 6.7, height = 3)
+DimPlot(tmp, group.by = "celltype", split.by = "condition") & theme_bw() & 
+    theme(axis.line = element_line(colour = "lightgrey"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_rect(colour = "lightgrey", fill=NA),
+          panel.background = element_blank(),
+          axis.title=element_blank(),
+          axis.text=element_blank(),
+          axis.ticks=element_blank(),
+          plot.title = element_text(face = "bold")) & ggtitle("hiPS6 cell types")
+# dev.off()
+
+# Coloured by condition
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/umap_crispri_org_condition_cellcycle_hips6.pdf", width = 7, height = 6)
+DimPlot(tmp, group.by = "condition", size = 0.1, cols = c("#794493", "grey"), alpha = 0.7) & theme_bw() & 
+    theme(axis.line = element_line(colour = "lightgrey"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_rect(colour = "lightgrey", fill=NA),
+          panel.background = element_blank(),
+          axis.title=element_blank(),
+          axis.text=element_blank(),
+          axis.ticks=element_blank(),
+          plot.title = element_text(face = "bold")) & ggtitle("hiPS6 conditions")
+# dev.off()
+```
+
+## Cell type composition in each experiment
+```{r}
+nuclei_ratio <- FetchData(crispri_org, vars = c("celltype", "seurat_clusters","condition", "batch", "cell_line", "orig.ident", "condition_cell_line_batch"))
+nuclei_ratio_g3 <- nuclei_ratio[which(nuclei_ratio$condition %in% c("gRNA3", "LacZ")),]
+
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/celltype_cluster_composition_bars.pdf", height = 4)
+ggplot(nuclei_ratio_g3, aes(x=condition, fill=celltype)) + geom_bar(stat="count", position = "fill") + facet_wrap(cell_line~batch, scales = "free_x", ncol=6) + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + labs(x="Condition", y="Ratio of nuclei", fill = "Cell type")  + ggtitle("Cell type composition (split batches)")
+
+ggplot(nuclei_ratio_g3, aes(x=condition, fill=celltype)) + geom_bar(stat="count", position = "fill") + facet_wrap(.~cell_line, scales = "free_x", ncol=6) + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + labs(x="Condition", y="Ratio of nuclei", fill = "Cell type")  + ggtitle("Cell type composition (pooled batches)")
+
+ggplot(nuclei_ratio_g3, aes(x=condition, fill=seurat_clusters)) + geom_bar(stat="count", position = "fill") + facet_wrap(cell_line~batch, scales = "free_x", ncol=6) + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + labs(x="Condition", y="Ratio of nuclei", fill = "Cell type") + scale_fill_manual(values = brewer.pal(n=8,"Set2"))  + ggtitle("Cluster composition (split batches)")
+
+ggplot(nuclei_ratio_g3, aes(x=condition, fill=seurat_clusters)) + geom_bar(stat="count", position = "fill") + facet_wrap(cell_line~batch, scales = "free_x", ncol=6) + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + labs(x="Condition", y="Ratio of nuclei", fill = "Cell type") + scale_fill_manual(values = brewer.pal(n=8,"Set2"))  + ggtitle("Cluster composition (split batches)")
+
+ggplot(nuclei_ratio_g3, aes(x=condition, fill=seurat_clusters)) + geom_bar(stat="count", position = "fill") + facet_wrap(~cell_line, scales = "free_x", ncol=6) + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + labs(x="Condition", y="Ratio of nuclei", fill = "Cluster") + scale_fill_manual(values = brewer.pal(n=8,"Set2")) + ggtitle("Cluster composition (pooled batches)")
+
+ggplot(nuclei_ratio_g3, aes(x=condition, fill=seurat_clusters)) + geom_bar(stat="count", position = "dodge") + facet_wrap(cell_line~batch, scales = "free_x", ncol=6) + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + labs(x="Condition", y="Ratio of nuclei", fill = "Cluster") + scale_fill_manual(values = brewer.pal(n=8,"Set2"))  + ggtitle("Cluster composition (split batches)")
+# dev.off()
+```
+
+## Differential expression analysis 
+
+Differences between LacZ and g1 - per cluster
+```{r}
+experiments <- list("g3_hiPS6" = c("LacZ_hiPS6_1", "LacZ_hiPS6_2", "LacZ_hiPS6_3", "LacZ_hiPS6_4",
+                                   "gRNA3_hiPS6_1","gRNA3_hiPS6_2","gRNA3_hiPS6_3", "gRNA3_hiPS6_4"),
+                    "g1_hiPS6" = c("LacZ_hiPS6_1", "LacZ_hiPS6_4",
+                                   "gRNA3_hiPS6_1","gRNA1_hiPS6_4"),
+                    "g3_hiPS48" = c("LacZ_hiPS48_1","LacZ_hiPS48_2", "gRNA3_hiPS48_1", "gRNA3_hiPS48_2"),
+                    "g1_hiPS48" = c("LacZ_hiPS48_2", "gRNA1_hiPS48_2")) 
+
+deas_clusters <- sapply(names(experiments), function(x) NULL)
+clusters <- unique(crispri_org$seurat_clusters)
+for(experiment in names(experiments)){
+  deas_clusters[[experiment]] <- list()
+  subset_crispri_org <- subset(crispri_org, condition_cell_line_batch %in% experiments[[experiment]])
+  subset_crispri_org <- JoinLayers(subset_crispri_org)
+  ident1 <- unique(subset_crispri_org$condition)[which(unique(subset_crispri_org$condition) != "LacZ")]
+  for(cluster in clusters){
+    if(!(experiment == "g3_hiPS48" & cluster == "7") & 
+       !(experiment == "g3_hiPS48" & cluster == "5") &
+       !(experiment == "g1_hiPS48" & cluster == "7")){
+      print(experiment)
+      print(cluster)
+      print(ident1)
+      deas_clusters[[experiment]][[cluster]] <- FindMarkers(subset_crispri_org, group.by = "condition", ident.1 = ident1, subset.ident = cluster, logfc.threshold = 0, only.pos = FALSE)
+      deas_clusters[[experiment]][[cluster]]$gene <- rownames(deas_clusters[[experiment]][[cluster]])
+    }
+  }
+}
+
+deas_clusters_bound <- list()
+for(experiment in names(experiments)){
+  for(cluster in clusters){
+    deas_clusters_bound[[paste(experiment, cluster, sep="_")]] <- deas_clusters[[experiment]][[cluster]]
+  }
+}
+
+# write.xlsx(deas_clusters_bound, "/Volumes/MyPassport/CRISPRi_L1s/results/tables/genes_DEA.xlsx")
+
+# saveRDS(deas_clusters, "/Volumes/MyPassport/CRISPRi_L1s/10X/r_scripts/src/crispri_org_deas_clusters.rds")
+deas_clusters <- readRDS("/Volumes/MyPassport/CRISPRi_L1s/10X/src/r_scripts/crispri_org_deas_clusters.rds")
+```
+
+## Tag genes that have "same" or "opposite" direction to the results on hiPS6 g1
+
+```{r}
+deas_log2FC <- list()
+for(i in as.character(0:7)){
+  deas_log2FC[[i]] <- list()
+  colnames(deas_clusters[["g3_hiPS6"]][[i]])[2] <- paste(i, "_g3_hiPS6_avg_log2FC", sep="")
+  for(experiment in c("g3_hiPS48", "g1_hiPS6", "g1_hiPS48")){
+    if(!(experiment == "g3_hiPS48" & i == "7") & !(experiment == "g3_hiPS48" & i == "5") & !(experiment == "g1_hiPS48" & i == "7")){
+      deas_cluster_experiment <- deas_clusters[[experiment]][[i]]
+      colnames(deas_cluster_experiment)[2] <- paste(i, experiment, "avg_log2FC", sep="_")
+      
+      genes <- rownames(deas_clusters[["g3_hiPS6"]][[i]])[which(rownames(deas_clusters[["g3_hiPS6"]][[i]]) %in% rownames(deas_cluster_experiment))]
+      deas_log2FC[[i]][[experiment]] <- cbind(deas_clusters[["g3_hiPS6"]][[i]][genes, paste(i, "_g3_hiPS6_avg_log2FC", sep=""), drop=F],
+                                              deas_cluster_experiment[genes, paste(i, experiment, "avg_log2FC", sep="_"), drop=F])
+      deas_log2FC[[i]][[experiment]]$gene <- rownames(deas_log2FC[[i]][[experiment]])
+      deas_log2FC[[i]][[experiment]]$direction <- ifelse(deas_log2FC[[i]][[experiment]][,paste(i, "_g3_hiPS6_avg_log2FC", sep="")] < 0 & deas_log2FC[[i]][[experiment]][,paste(i, experiment, "avg_log2FC", sep="_")] < 0, 
+                                                         ifelse(deas_log2FC[[i]][[experiment]][,paste(i, "_g3_hiPS6_avg_log2FC", sep="")] < -0.5 & deas_log2FC[[i]][[experiment]][,paste(i, experiment, "avg_log2FC", sep="_")] < -0.5, "down_0.5", "down"), 
+                                                         ifelse(deas_log2FC[[i]][[experiment]][,paste(i, "_g3_hiPS6_avg_log2FC", sep="")] > 0 & deas_log2FC[[i]][[experiment]][,paste(i, experiment, "avg_log2FC", sep="_")] > 0, ifelse(deas_log2FC[[i]][[experiment]][,paste(i, "_g3_hiPS6_avg_log2FC", sep="")] > 0.5 & deas_log2FC[[i]][[experiment]][,paste(i, experiment, "avg_log2FC", sep="_")] > 0.5, "up_0.5", "up"), 
+                                                         "opposite"))
+    }
+  }
+}
+```
+
+
+

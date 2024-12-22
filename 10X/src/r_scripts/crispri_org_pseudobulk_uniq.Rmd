@@ -1,0 +1,271 @@
+---
+title: "L1-CRISPRi organoids: TE pseudobulk visualization"
+output: html_notebook
+---
+
+This markdown relates to the visualization of pseudobulk quantification of TEs in day 15 cerebral organoids.
+
+I want a heatmap of the differentially expressed FL-L1s (discovered from the bulk RNAseq data) using the pseudobulked normalized TE expression (using gene sizeFactors).
+
+## Functions
+
+Handy functions to plot featureplots in pseudobulks
+
+```{r}
+blues <- brewer.pal(9, 'Blues')[3:9]
+pseudobulk_gene <- function(df, gene, minimum = NA, maximum = NA, midpoint = NA, scaled = T){
+  tmp <- df[which(df$gene_name == gene),-1]
+  rownames(tmp) <- tmp[,ncol(tmp)]
+  tmp <- tmp[,-ncol(tmp)]
+  tmp <- t(tmp)
+  # umap_tmp <- umap[which(umap$region == region),]
+  tmp <- merge(crispri_umap, tmp, by.x="sample_cluster", by.y="row.names")
+  if(scaled){
+    minimum = ifelse(is.na(minimum), log2(min(tmp[,gene])+1), minimum)
+    maximum = ifelse(is.na(maximum), log2(max(tmp[,gene])+1) - 2*(sd(log2((tmp[,gene])+1))), maximum)
+    midpoint = maximum/2
+    tmp[,gene] <- ifelse(tmp[,gene] > maximum, maximum, tmp[,gene])
+    plt <- tmp %>%
+      arrange(get(gene)) %>%
+      ggplot(aes(x=umap_1, y=umap_2, color=log2(get(gene)+1))) + geom_point(size=0.4) 
+  }else{
+    minimum = ifelse(is.na(minimum), min(tmp[,gene]), minimum)
+    maximum = ifelse(is.na(maximum), max(tmp[,gene]) - 2*(sd((tmp[,gene]))), maximum)
+    midpoint = maximum/2
+    tmp[,gene] <- ifelse(tmp[,gene] > maximum, maximum, tmp[,gene])
+    plt <- tmp %>%
+      arrange(get(gene)) %>%
+      ggplot(aes(x=umap_1, y=umap_2, color=get(gene))) + geom_point(size=0.4) 
+  }
+  plt <- plt + theme_bw() + 
+    scale_colour_gradient2(limits = c(minimum, maximum), high = "#1e386c", low = "#bfdbf0", mid = "#0394cb", midpoint = midpoint) +
+    labs(color = gene) +
+    facet_wrap(.~condition) +
+    ggtitle(gene) +
+    theme(axis.line = element_line(colour = "lightgrey"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_rect(colour = "lightgrey", fill=NA),
+          panel.background = element_blank(),
+          axis.title=element_blank(),
+          axis.text=element_blank(),
+          axis.ticks=element_blank(),
+          plot.title = element_text(face = "bold"))
+  return(plt)
+}
+
+pseudobulk_TE <- function(df, TE, minimum = NA, maximum = NA, midpoint = NA, scaled=T){
+  tmp <- df[which(df$TE_subfamily == TE),]
+  rownames(tmp) <- tmp[,ncol(tmp)]
+  tmp <- tmp[,-ncol(tmp)]
+  tmp <- t(tmp)
+  tmp <- merge(crispri_umap, tmp, by.x="sample_cluster", by.y="row.names")
+  if(scaled){
+    minimum = ifelse(is.na(minimum), min(log2(tmp[,TE]+1)), minimum)
+    maximum = max(log2(tmp[,TE]+1))#ifelse(is.na(maximum), log2(max(tmp[,TE])+1) - 2*(sd(log2((tmp[,TE])+1))), maximum)
+    midpoint = minimum + ((maximum - minimum)/2)
+    tmp[,TE] <- ifelse(log2(tmp[,TE]+1) > maximum, maximum, log2(tmp[,TE]+1))
+    plt <- tmp %>%
+      arrange(get(TE)) %>%
+      ggplot(aes(x=umap_1, y=umap_2, color=get(TE))) + geom_point(size=0.4) 
+  }else{
+    minimum = min(tmp[,TE])#ifelse(is.na(minimum), min(tmp[,TE]), minimum)
+    maximum =  max(tmp[,TE])#ifelse(is.na(maximum), max(tmp[,TE]) - 2*(sd(tmp[,TE])), maximum)
+    midpoint = maximum/2
+    tmp[,TE] <- ifelse(tmp[,TE] > maximum, maximum, tmp[,TE])
+    plt <- tmp %>%
+      arrange(get(TE)) %>%
+      ggplot(aes(x=umap_1, y=umap_2, color=get(TE))) + geom_point(size=0.4) 
+  }
+  plt <- plt + theme_bw() + 
+    facet_wrap(.~condition) +
+    scale_colour_gradient2(limits = c(minimum, maximum), high = "#1e386c", low = "#bfdbf0", mid = "#0394cb", midpoint = midpoint) +
+    labs(color = TE) +
+    ggtitle(TE) +
+    theme(axis.line = element_line(colour = "lightgrey"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_rect(colour = "lightgrey", fill=NA),
+          panel.background = element_blank(),
+          axis.title=element_blank(),
+          axis.text=element_blank(),
+          axis.ticks=element_blank(),
+          plot.title = element_text(face = "bold"))
+  return(plt)
+}
+
+```
+
+## Read samplesheet
+
+```{r}
+library(openxlsx)
+library(pheatmap)
+library(data.table)
+library(dplyr)
+library(RColorBrewer)
+library(stringr)
+library(DESeq2)
+library(Seurat)
+library(ggplot2)
+
+samplesheet <- fread("/Volumes/MyPassport/CRISPRi_L1s/10X/metadata.tab", data.table = F, fill=T)
+samplesheet$sample_name <- paste("crispri_", samplesheet$sample, sep="")
+
+sizeFactors <- openxlsx::read.xlsx("/Volumes/MyPassport/CRISPRi_L1s/10X/results/tables/sizeFactors_pseudobulk.xlsx")
+
+sizeFactors$sample_name <- gsub('.{2}$', '', sizeFactors$samples)
+sizeFactors$sample_name <- ifelse(endsWith(sizeFactors$sample_name, "_"), gsub('.{1}$', '', sizeFactors$sample_name), sizeFactors$sample_name)
+
+samplesheet <- merge(samplesheet, sizeFactors, by="sample_name")
+rownames(samplesheet) <- samplesheet$samples
+
+```
+
+## Read data and normalize using gene sizeFactors
+
+```{r}
+path <- "/Volumes/MyPassport/CRISPRi_L1s/10X/3_combinedUMAP_perCluster_res0.1/clusterPipeline/TEcounts/unique/"
+
+counts <- data.frame()
+files <- list.files(path, recursive = T)
+files <- files[!grepl(".summary", files)]
+for(i in 1:length(files)){
+  file <- files[i]
+  if(i == 1){
+    counts <- fread(paste(path, file, sep="/"), data.table = F)  
+    colnames(counts)[ncol(counts)] <- str_remove_all(file, pattern = "_uniqueMap.cntTable")
+  }else{
+    tmp <- fread(paste(path, file, sep="/"), data.table = F)  
+    colnames(tmp)[ncol(tmp)] <- str_remove_all(file, pattern = "_uniqueMap.cntTable")
+    if(all(counts$Geneid == tmp$Geneid)){
+      counts <- cbind(counts, tmp[,ncol(tmp),drop=F])
+    }else{
+      counts <- merge(counts, tmp[,c(1, ncol(tmp))], by="Geneid")
+    }
+  }
+}
+rownames(counts) <- counts$Geneid
+rownames(sizeFactors) <- sizeFactors$samples
+counts_norm <- counts[,rownames(samplesheet)]
+counts_norm[] <- mapply('/', counts_norm[,rownames(samplesheet)], sizeFactors[rownames(samplesheet),"sizeFactor"])
+```
+
+## Focusing on the differentially expressed FL-L1s
+
+Based on the bulk RNAseq data (organoids hiPS6 g1 batch 1 and 2)
+
+```{r}
+org_crispri_g3 <- list()
+org_crispri_g3[["hiPS6_org_crispri_g3"]] <- read.xlsx("/Volumes/MyPassport/CRISPRi_L1s/results/tables/FL_L1PAs_DEA.xlsx", sheet = "hiPS6_org_crispri_g3")
+org_crispri_g3[["hiPS6_org_crispri_g3_batch2"]] <- read.xlsx("/Volumes/MyPassport/CRISPRi_L1s/results/tables/FL_L1PAs_DEA.xlsx", sheet = "hiPS6_org_crispri_g3_batch2")
+
+org_crispri_g3_DE_FL_L1PA <- unique(c(org_crispri_g3$hiPS6_org_crispri_g3$TE_id, 
+                                      org_crispri_g3$hiPS6_org_crispri_g3_batch2$TE_id))
+
+coldata_celltypes <- reshape2::melt(list("NPCs" = as.character(c(0:2, 7)),
+                    "Early neurons" = as.character(c(4,5)),
+                    "Endothelial" = as.character(c(3,6))))
+
+samplesheet <- merge(samplesheet, coldata_celltypes, by.x="cluster", by.y="value")
+rownames(samplesheet) <- samplesheet$samples
+colnames(samplesheet)[ncol(samplesheet)] <- "celltype"
+samplesheet_NPCs <- samplesheet[which(samplesheet$celltype == "NPCs" & samplesheet$cell_line == "hiPS6"),]
+samplesheet_NPCs <- samplesheet_NPCs[order(samplesheet_NPCs$guide, samplesheet_NPCs$cluster, samplesheet_NPCs$batch),]
+
+samplesheet_EarlyNeurons <- samplesheet[which(samplesheet$celltype == "Early neurons" & samplesheet$cell_line == "hiPS6"),]
+samplesheet_EarlyNeurons <- samplesheet_EarlyNeurons[order(samplesheet_EarlyNeurons$guide, samplesheet_EarlyNeurons$cluster , samplesheet_EarlyNeurons$batch),]
+samplesheet_Endothelial <- samplesheet[which(samplesheet$celltype == "Endothelial" & samplesheet$cell_line == "hiPS6"),]
+samplesheet_Endothelial <- samplesheet_Endothelial[order(samplesheet_Endothelial$guide, samplesheet_Endothelial$cluster , samplesheet_Endothelial$batch),]
+```
+
+## Annotation color for heatmaps
+
+Per cell type
+```{r}
+colors_NPC = list("celltype" = c("NPCs" = "#7bacd9"),
+     "cluster" = c("0" = "#FBB4AE",  
+                   "1" = "#E3BCBF",
+                   "2" = "#CBC4D1",
+                   "7" = "#D8D5D9"),
+     "guide" = c("gRNA3" = "#ac93b3",
+                 "LacZ" = "#c6c5c0"),
+     "batch" = c("1" = "#F7FCF5",
+                 "2" = "#BAE3B3",
+                 "3" = "#51B365",
+                 "4" = "#005A32"),
+     "sample" = c(
+       "MN07_gRNA3_Rep1_snRNA_org_hiPS6_LV3824_L1_CRISPRi_d15_batch2" = "#DECBE4",
+       "MN07_gRNA3_Rep2_snRNA_org_hiPS6_LV3824_L1_CRISPRi_d15_batch1" = "#B3E2CD",
+       "MN07_gRNA3_Rep2_snRNA_org_hiPS6_LV3824_L1_CRISPRi_d15_batch2" = "#ECD1B3",
+       "MN07_gRNA3_Rep3_snRNA_org_hiPS6_LV3824_L1_CRISPRi_d15_batch2" = "#CCCCCC",
+       "MN07_LacZ_Rep1_snRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch2" = "#D8D1E6",
+       "MN07_LacZ_Rep2_snRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch1" = "#F2CEE1",
+       "MN07_LacZ_Rep2_snRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch2" = "#E7F0CB",
+       "MN07_LacZ_Rep3_snRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch2" = "#F6F3B7",
+       "Seq254_14" = "#F8EABB",
+       "Seq254_15" = "#E8DDCC"))
+
+
+colors_EN = list("celltype" = c("Early neurons" = "#e9b5b4"),
+     "cluster" = c("4" = "#BBD7D9",
+                   "5" = "#C3E1CF"),
+     "guide" = c("gRNA3" = "#ac93b3",
+                 "LacZ" = "#c6c5c0"),
+     "batch" = c("1" = "#F7FCF5",
+                 "2" = "#BAE3B3",
+                 "3" = "#51B365",
+                 "4" = "#005A32"),
+     "sample" = c(
+       "MN07_gRNA3_Rep1_snRNA_org_hiPS6_LV3824_L1_CRISPRi_d15_batch2" = "#DECBE4",
+       "MN07_gRNA3_Rep2_snRNA_org_hiPS6_LV3824_L1_CRISPRi_d15_batch1" = "#B3E2CD",
+       "MN07_gRNA3_Rep2_snRNA_org_hiPS6_LV3824_L1_CRISPRi_d15_batch2" = "#ECD1B3",
+       "MN07_gRNA3_Rep3_snRNA_org_hiPS6_LV3824_L1_CRISPRi_d15_batch2" = "#CCCCCC",
+       "MN07_LacZ_Rep1_snRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch2" = "#D8D1E6",
+       "MN07_LacZ_Rep2_snRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch1" = "#F2CEE1",
+       "MN07_LacZ_Rep2_snRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch2" = "#E7F0CB",
+       "MN07_LacZ_Rep3_snRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch2" = "#F6F3B7",
+       "Seq254_14" = "#F8EABB",
+       "Seq254_15" = "#E8DDCC"))
+
+
+colors_epi = list("celltype" = c("Endothelial" = "#edaf00"),
+     "cluster" = c("3" = "#B3CDE3",
+                   "6" = "#D2E0CF"),
+     "guide" = c("gRNA3" = "#ac93b3",
+                 "LacZ" = "#c6c5c0"),
+     "batch" = c("1" = "#F7FCF5",
+                 "2" = "#BAE3B3",
+                 "3" = "#51B365",
+                 "4" = "#005A32"),
+     "sample" = c(
+       "MN07_gRNA3_Rep1_snRNA_org_hiPS6_LV3824_L1_CRISPRi_d15_batch2" = "#DECBE4",
+       "MN07_gRNA3_Rep2_snRNA_org_hiPS6_LV3824_L1_CRISPRi_d15_batch1" = "#B3E2CD",
+       "MN07_gRNA3_Rep2_snRNA_org_hiPS6_LV3824_L1_CRISPRi_d15_batch2" = "#ECD1B3",
+       "MN07_gRNA3_Rep3_snRNA_org_hiPS6_LV3824_L1_CRISPRi_d15_batch2" = "#CCCCCC",
+       "MN07_LacZ_Rep1_snRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch2" = "#D8D1E6",
+       "MN07_LacZ_Rep2_snRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch1" = "#F2CEE1",
+       "MN07_LacZ_Rep2_snRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch2" = "#E7F0CB",
+       "MN07_LacZ_Rep3_snRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch2" = "#F6F3B7",
+       "Seq254_14" = "#F8EABB",
+       "Seq254_15" = "#E8DDCC"))
+```
+
+## Plot on heatmap 
+
+Each FL-L1 per pseudobulked cluster
+```{r}
+# Normalized counts for NPCs
+counts_norm_DE_FL_L1PA_NPCs <- counts_norm[org_crispri_g3_DE_FL_L1PA, rownames(samplesheet_NPCs)]
+
+tmp_tree <- pheatmap(log2(counts_norm_DE_FL_L1PA_NPCs[org_crispri_g3_DE_FL_L1PA, ]+0.5), annotation_col = samplesheet_NPCs[,c("guide", "sample", "batch", "cluster", "celltype")], show_colnames = F, cluster_cols = F, border_color = NA, scale="row", color = colorRampPalette(c("#e0e0e0","white", "tomato2"))(100))
+
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/org_crispri_g3_DE_FL_L1PA_hiPS6.pdf", width = 12)
+pheatmap(log2(counts_norm_DE_FL_L1PA_NPCs[tmp_tree$tree_row$labels, ]+0.5), annotation_col = samplesheet_NPCs[,c("guide", "sample", "batch", "cluster", "celltype")], show_colnames = F, cluster_cols = F, cluster_rows = F, border_color = NA, scale="row",  color = colorRampPalette(c("#e0e0e0","white", "tomato2"))(100), annotation_colors = colors_NPC)
+
+pheatmap(log2(counts_norm[tmp_tree$tree_row$labels, rownames(samplesheet_EarlyNeurons)]+0.5), annotation_col = samplesheet_EarlyNeurons[,c("guide", "sample", "batch", "cluster", "celltype")], show_colnames = F, cluster_cols = F, cluster_rows = F,border_color = NA,  scale="row", color = colorRampPalette(c("#e0e0e0","white", "tomato2"))(100), annotation_colors = colors_EN)
+
+pheatmap(log2(counts_norm[tmp_tree$tree_row$labels, rownames(samplesheet_Endothelial)]+0.5), annotation_col = samplesheet_Endothelial[,c("guide", "sample", "batch", "cluster", "celltype")], show_colnames = F, cluster_cols = F, cluster_rows = F, border_color = NA, scale="row", color = colorRampPalette(c("#e0e0e0","white", "tomato2"))(100), annotation_colors = colors_epi)
+# dev.off()
+```
+

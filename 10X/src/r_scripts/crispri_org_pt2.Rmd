@@ -1,0 +1,362 @@
+---
+title: "L1-CRISPRi organoids: Cell cycle and commonly dysregulated genes"
+output: html_notebook
+---
+
+This markdown relates to the visualization of day 15 cerebral organoids.
+
+Main questions:
+1. Cell cycle
+2. Biomarkers 
+3. Characterize the present clusters
+4. Commonly down / up regulated genes overrepresentation test
+
+## Read data and add metadata
+
+Including previously defined cell types (see crispri_org.Rmd), batch, cell line, condition, etc.
+
+```{r}
+library(data.table)
+library(openxlsx)
+library(Seurat)
+library(stringr)
+library(ggpubr)
+library(ggplot2)
+library(ggpubr)
+
+crispri_org <- readRDS("/Volumes/MyPassport/CRISPRi_L1s/10X/crispri.rds")
+
+samples_metadata <- fread("/Volumes/MyPassport/CRISPRi_L1s/10X/metadata.tab", data.table = F)
+metadata <- FetchData(crispri_org, "orig.ident")
+metadata$barcode <- rownames(metadata)
+metadata <- merge(metadata, samples_metadata, by.y="sample", by.x="orig.ident")
+rownames(metadata) <- metadata$barcode
+crispri_org <- AddMetaData(crispri_org, metadata[,c("guide", "batch", "cell_line", "seqnum")], col.name = c("condition", "batch", "cell_line", "seqnum"))
+coldata_celltypes <- reshape2::melt(list("NPCs" = as.character(c(0:2, 7)),
+                    "Early neurons" = as.character(c(4,5)),
+                    "Endothelial" = as.character(c(3,6))))
+
+crispri_org_join <- JoinLayers(crispri_org)
+
+### ADD cell type to metadata
+clusters_per_cell <- FetchData(crispri_org_join, "seurat_clusters")
+clusters_per_cell$barcode <- rownames(clusters_per_cell)
+celltypes_per_cell <- merge(coldata_celltypes, clusters_per_cell, by.x="value", by.y="seurat_clusters")
+colnames(celltypes_per_cell)[2] <- "celltype"
+rownames(celltypes_per_cell) <- celltypes_per_cell$barcode
+crispri_org_join <- AddMetaData(crispri_org_join, metadata = celltypes_per_cell[,c("celltype"), drop=F], col.name = "celltype")
+
+cellline_per_cell <- FetchData(crispri_org_join, c("condition", "cell_line", "batch", "celltype", "seurat_clusters"))
+cellline_per_cell$barcode <- rownames(cellline_per_cell)
+cellline_per_cell$condition_cell_line <- paste(cellline_per_cell$condition, cellline_per_cell$cell_line, sep="_")
+cellline_per_cell$condition_celltype <- paste(cellline_per_cell$condition, cellline_per_cell$celltype, sep="_")
+cellline_per_cell$condition_cell_line_batch <- paste(cellline_per_cell$condition, cellline_per_cell$cell_line, cellline_per_cell$batch, sep="_")
+crispri_org_join <- AddMetaData(crispri_org_join, metadata = cellline_per_cell[,c("condition_cell_line", "condition_cell_line_batch", "condition_celltype"), drop=F], col.name = c("condition_cell_line", "condition_cell_line_batch", "condition_celltype"))
+cellline_per_cell$condition_cell_line_cluster <- paste(cellline_per_cell$condition_cell_line, cellline_per_cell$seurat_clusters, sep = "_")
+cellline_per_cell$condition_cell_line_batch_cluster <- paste(cellline_per_cell$condition_cell_line_batch, cellline_per_cell$seurat_clusters, sep = "_")
+cellline_per_cell$condition_cell_line_celltype <- paste(cellline_per_cell$condition_cell_line, cellline_per_cell$celltype, sep = "_")
+cellline_per_cell$condition_cell_line_batch_celltype <- paste(cellline_per_cell$condition_cell_line_batch, cellline_per_cell$celltype, sep = "_")
+crispri_org_join <- AddMetaData(crispri_org_join, metadata = cellline_per_cell[,c("condition_cell_line_batch_cluster", "condition_cell_line_batch_celltype", "condition_cell_line_cluster", "condition_cell_line_celltype"), drop=F], col.name = c("condition_cell_line_batch_cluster", "condition_cell_line_batch_celltype", "condition_cell_line_cluster", "condition_cell_line_celltype"))
+```
+
+## Cell cycle
+
+```{r}
+s.genes <- cc.genes$s.genes
+g2m.genes <- cc.genes$g2m.genes
+crispri_org_join <- CellCycleScoring(crispri_org_join, s.features = s.genes, g2m.features = g2m.genes, set.ident = F, assay="RNA")
+crispri_org_join <- AddMetaData(crispri_org_join, metadata = ifelse(crispri_org_join$Phase == "G1", "non-cycling", "cycling"), col.name = "cellCycle")
+
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/dotplot_crispri_org_markers_clusters.pdf")
+DotPlot(crispri_org_join, features = unique(c("G2M.Score","S.Score",  "TJP1",  "GLI3", "CUX2", "PAX6", "SOX2", "PCNA", "EOMES", "BCL11B", "MAP2", "NCAM1", "RBFOX3", "TBR1", "DCX", "GAD1")), group.by = "seurat_clusters", assay = "RNA") & theme(axis.text.x = element_text(angle=90, hjust=1)) & coord_flip()
+# dev.off()
+
+cellcycle_scores <- FetchData(tmp, c("umap_1", "umap_2","day", "G2M.Score", "S.Score", "condition", "seurat_clusters"))
+cellcycle_scores <- merge(cellcycle_scores, FetchData(tmp, c("celltype", "condition_cell_line_batch")), by="row.names")
+rownames(cellcycle_scores) <- cellcycle_scores$Row.names
+cellcycle_scores <- cellcycle_scores[,-1]
+
+cellcycle_scores$score <- cellcycle_scores$G2M.Score + cellcycle_scores$S.Score
+cellcycle_scores <- cellcycle_scores[order(cellcycle_scores$seurat_clusters, cellcycle_scores$condition),]
+
+# Featureplot coloured by cell cycle score
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/umap_crispri_org_cellcycle_score_hiPS6.pdf", width = 5, height = 4)
+ggplot(cellcycle_scores, aes(x=umap_1, y=umap_2, colour=score)) + geom_point(size=0.5)+
+  scale_colour_gradient2(low="white", mid="lightgrey", high = "red") + theme_bw() +
+    theme(axis.line = element_line(colour = "lightgrey"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_rect(colour = "lightgrey", fill=NA),
+          panel.background = element_blank(),
+          axis.title=element_blank(),
+          axis.text=element_blank(),
+          axis.ticks=element_blank(),
+          plot.title = element_text(face = "bold"))
+# dev.off()
+
+
+## Cell cycle visualization per experiment
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/umap_crispri_org_cellcycle_score.pdf", width = 14, height = 8)
+ggarrange(
+  ggplot(cellcycle_scores, aes(x=umap_1, y=umap_2, colour=G2M.Score)) + geom_point(size=0.5) + facet_wrap(.~condition_cell_line_batch, ncol = 8) + scale_colour_gradient2(low="white", mid="lightgrey", high = "red") + theme_bw() +
+    theme(axis.line = element_line(colour = "lightgrey"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_rect(colour = "lightgrey", fill=NA),
+          panel.background = element_blank(),
+          axis.title=element_blank(),
+          axis.text=element_blank(),
+          axis.ticks=element_blank(),
+          plot.title = element_text(face = "bold")),
+          
+  ggplot(cellcycle_scores, aes(x=umap_1, y=umap_2, colour=S.Score)) + geom_point(size=0.5) + facet_wrap(.~condition_cell_line_batch, ncol = 8) + scale_colour_gradient2(low="white", mid="lightgrey", high = "red") + theme_bw() +
+    theme(axis.line = element_line(colour = "lightgrey"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_rect(colour = "lightgrey", fill=NA),
+          panel.background = element_blank(),
+          axis.title=element_blank(),
+          axis.text=element_blank(),
+          axis.ticks=element_blank(),
+          plot.title = element_text(face = "bold")), ncol=1)
+# dev.off()
+```
+
+## Markers per experiment per cell type
+
+```{r}
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/dotplot_crispri_org_markers_celltypes_lacz.pdf", height = 6, width = 7)
+DotPlot(subset(crispri_org_join, condition == "LacZ" & cell_line == "hiPS6"), features = markers, group.by  = "celltype", assay = "RNA", cols = "RdBu") & coord_flip() & ggtitle("LacZ hiPS6 org (all)")
+DotPlot(subset(crispri_org_join, condition == "LacZ" & cell_line == "hiPS48"), features = markers, group.by  = "celltype", assay = "RNA", cols = "RdBu") & coord_flip() & ggtitle("LacZ hiPS48 org (all)")
+DotPlot(subset(crispri_org_join, condition_cell_line_batch == "LacZ_hiPS6_1"), features = markers, group.by  = "celltype", assay = "RNA", cols = "RdBu") & coord_flip() & ggtitle("LacZ hiPS6 org batch 1")
+DotPlot(subset(crispri_org_join, condition_cell_line_batch == "LacZ_hiPS6_2"), features = markers, group.by  = "celltype", assay = "RNA", cols = "RdBu") & coord_flip() & ggtitle("LacZ hiPS6 org batch 2")
+DotPlot(subset(crispri_org_join, condition_cell_line_batch == "LacZ_hiPS6_3"), features = markers, group.by  = "celltype", assay = "RNA", cols = "RdBu") & coord_flip() & ggtitle("LacZ hiPS6 org batch 3")
+DotPlot(subset(crispri_org_join, condition_cell_line_batch == "LacZ_hiPS6_4"), features = markers, group.by  = "celltype", assay = "RNA", cols = "RdBu") & coord_flip() & ggtitle("LacZ hiPS6 org batch 4")
+DotPlot(subset(crispri_org_join, condition_cell_line_batch == "LacZ_hiPS48_1"), features = markers, group.by  = "celltype", assay = "RNA", cols = "RdBu") & coord_flip() & ggtitle("LacZ hiPS48 org batch 1")
+DotPlot(subset(crispri_org_join, condition_cell_line_batch == "LacZ_hiPS48_2"), features = markers, group.by  = "celltype", assay = "RNA", cols = "RdBu") & coord_flip() & ggtitle("LacZ hiPS48 org batch 2")
+# dev.off()
+
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/dotplot_crispri_org_markers_celltypes.pdf", height = 5, width = 7)
+DotPlot(subset(crispri_org_join, condition_cell_line_batch %in% c("LacZ_hiPS6_1", "gRNA3_hiPS6_1")), features = markers, group.by  = "condition_celltype", assay = "RNA", cols = "RdBu") & coord_flip() & ggtitle("hiPS6 org g3 batch 1")
+DotPlot(subset(crispri_org_join, condition_cell_line_batch %in% c("LacZ_hiPS6_2", "gRNA3_hiPS6_2")), features = markers, group.by  = "condition_celltype", assay = "RNA", cols = "RdBu") & coord_flip() & ggtitle("hiPS6 org g3 batch 2")
+DotPlot(subset(crispri_org_join, condition_cell_line_batch %in% c("LacZ_hiPS6_2", "gRNA1_hiPS6_2")), features = markers, group.by  = "condition_celltype", assay = "RNA", cols = "RdBu") & coord_flip() & ggtitle("hiPS6 org g1 batch 2")
+DotPlot(subset(crispri_org_join, condition_cell_line_batch %in% c("LacZ_hiPS6_3", "gRNA3_hiPS6_3")), features = markers, group.by  = "condition_celltype", assay = "RNA", cols = "RdBu") & coord_flip() & ggtitle("hiPS6 org g3 batch 3")
+DotPlot(subset(crispri_org_join, condition_cell_line_batch %in% c("LacZ_hiPS6_4", "gRNA3_hiPS6_4")), features = markers, group.by  = "condition_celltype", assay = "RNA", cols = "RdBu") & coord_flip() & ggtitle("hiPS6 org g3 batch 4")
+DotPlot(subset(crispri_org_join, condition_cell_line_batch %in% c("LacZ_hiPS6_4", "gRNA1_hiPS6_4")), features = markers, group.by  = "condition_celltype", assay = "RNA", cols = "RdBu") & coord_flip() & ggtitle("hiPS6 org g1 batch 4")
+DotPlot(subset(crispri_org_join, condition_cell_line_batch %in% c("LacZ_hiPS48_1", "gRNA3_hiPS48_1")), features = markers, group.by  = "condition_celltype", assay = "RNA", cols = "RdBu") & coord_flip() & ggtitle("hiPS48 org g3 batch 1")
+DotPlot(subset(crispri_org_join, condition_cell_line_batch %in% c("LacZ_hiPS48_2", "gRNA3_hiPS48_2")), features = markers, group.by  = "condition_celltype", assay = "RNA", cols = "RdBu") & coord_flip() & ggtitle("hiPS48 org g3 batch 2")
+DotPlot(subset(crispri_org_join, condition_cell_line_batch %in% c("LacZ_hiPS48_2", "gRNA1_hiPS48_2")), features = markers, group.by  = "condition_celltype", assay = "RNA", cols = "RdBu") & coord_flip() & ggtitle("hiPS48 org g1 batch 2")
+# dev.off()
+```
+
+## Characterize the clusters (DEA per cluster)
+
+Top 10 differentially expressed genes per cluster
+```{r}
+set.seed(10)
+crispri_org_join_markers <- FindAllMarkers(crispri_org_join, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+
+gene_annotation <- fread("/Volumes/MyPassport/annotations/human/gencode/v38/gencode.v38.annotation.gene_names.tab", data.table=F, skip=1, header =F )[,-1]
+colnames(gene_annotation) <- c("gene_name", "gene_type")
+crispri_org_join_markers <- merge(crispri_org_join_markers, gene_annotation, by.x="gene", by.y="gene_name")
+crispri_org_join_markers_top10 <- crispri_org_join_markers %>% 
+  filter(gene_type == "protein_coding") %>% 
+  filter(pct.1 > 0.4) %>% 
+  group_by(cluster) %>% top_n(n = 10, wt = avg_log2FC) %>% 
+  arrange(cluster)
+
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/crispri_org_markers_dotplot.pdf", height = 12, width = 7)
+DotPlot(crispri_org, features = crispri_org_join_markers_top10$gene, group.by  = "seurat_clusters", assay = "RNA", cols = "RdBu") & coord_flip() 
+# dev.off()
+
+# write.xlsx(crispri_org_join_markers, "/Volumes/MyPassport/CRISPRi_L1s/10X/results/tables/crispri_org_markers_clusters.xlsx")
+
+```
+
+## Log2FC of consistently upregulated or downregulated genes
+
+So, the files read here are based on the results of hiPS6 organoids. We need to find the genes that are:
+* Only upregulated in cluster 0 and not in cluster 1 (<=0.1 or NA) in gRNA1, 2, and in hiPS48.
+* Only upregulated in cluster 1 and not in cluster 0 (<=0.1 or NA) in gRNA1, 2, and in hiPS48.
+* Only downregulated in cluster 0 and not in cluster 1 (>= -0.1 or NA) in gRNA1, 2, and in hiPS48.
+* Only downregulated in cluster 1 and not in cluster 0 (>= -0.1 or NA) in gRNA1, 2, and in hiPS48.
+* Both up or downregulated in cluster 0 and 1
+
+Define if they are only upregulated in cluster 0
+```{r}
+deas_clusters <- readRDS("/Volumes/MyPassport/CRISPRi_L1s/10X/r_scripts/src/crispri_org_deas_clusters.rds")
+
+upreg_0 <- fread("/Volumes/MyPassport/CRISPRi_L1s/10X/results/tables/upreg_cluster_0.txt", header = F, data.table = F)
+upreg_1 <- fread("/Volumes/MyPassport/CRISPRi_L1s/10X/results/tables/upreg_cluster_1.txt", header = F, data.table = F)
+downreg_0 <- fread("/Volumes/MyPassport/CRISPRi_L1s/10X/results/tables/downreg_cluster_0.txt", header = F, data.table = F)
+downreg_1 <- fread("/Volumes/MyPassport/CRISPRi_L1s/10X/results/tables/downreg_cluster_1.txt", header = F, data.table = F)
+
+# Only upregulated in cluster 0 and not in cluster 1 (<=0.1 or NA) in gRNA1, 2, and in hiPS48.
+upreg_0_only <- intersect(intersect(upreg_0[which(deas_clusters$g3_hiPS6$`0`[upreg_0$V1, "avg_log2FC"] > 0.5 &
+                                                    (deas_clusters$g3_hiPS6$`1`[upreg_0$V1, "avg_log2FC"] <= 0.1 | is.na(deas_clusters$g3_hiPS6$`1`[upreg_0$V1, "avg_log2FC"]))), "V1"],
+                                    upreg_0[which(deas_clusters$g1_hiPS6$`0`[upreg_0$V1, "avg_log2FC"] > 0.5 &
+                                                    (deas_clusters$g1_hiPS6$`1`[upreg_0$V1, "avg_log2FC"] <= 0.1 | is.na(deas_clusters$g1_hiPS6$`1`[upreg_0$V1, "avg_log2FC"]))), "V1"]),
+                          upreg_0[which(deas_clusters$g3_hiPS48$`0`[upreg_0$V1, "avg_log2FC"] > 0.5 &
+                                          (deas_clusters$g3_hiPS48$`1`[upreg_0$V1, "avg_log2FC"] <= 0.1 | is.na(deas_clusters$g3_hiPS48$`1`[upreg_0$V1, "avg_log2FC"]))), "V1"])
+# GADD45G, PCDHA3
+
+# Only upregulated in cluster 1 and not in cluster 0 (<=0.1 or NA) in gRNA1, 2, and in hiPS48.
+upreg_1_only <- intersect(intersect(upreg_1[which(deas_clusters$g3_hiPS6$`1`[upreg_1$V1, "avg_log2FC"] > 0.5 &
+                                                    (deas_clusters$g3_hiPS6$`0`[upreg_1$V1, "avg_log2FC"] <= 0.1 | is.na(deas_clusters$g3_hiPS6$`0`[upreg_1$V1, "avg_log2FC"]))), "V1"],
+                                    upreg_1[which(deas_clusters$g1_hiPS6$`1`[upreg_1$V1, "avg_log2FC"] > 0.5 &
+                                                    (deas_clusters$g1_hiPS6$`0`[upreg_1$V1, "avg_log2FC"] <= 0.1 | is.na(deas_clusters$g1_hiPS6$`0`[upreg_1$V1, "avg_log2FC"]))), "V1"]),
+                          upreg_1[which(deas_clusters$g3_hiPS48$`1`[upreg_1$V1, "avg_log2FC"] > 0.5 &
+                                          (deas_clusters$g3_hiPS48$`0`[upreg_1$V1, "avg_log2FC"] <= 0.1 | is.na(deas_clusters$g3_hiPS48$`0`[upreg_1$V1, "avg_log2FC"]))), "V1"])
+# RRH, LINC01994
+
+# Only downregulated in cluster 0 and not in cluster 1 (>= -0.1 or NA) in gRNA1, 2, and in hiPS48.
+downreg_0_only <- intersect(intersect(downreg_0[which(deas_clusters$g3_hiPS6$`0`[downreg_0$V1, "avg_log2FC"] < -0.5 &
+                                                    (deas_clusters$g3_hiPS6$`1`[downreg_0$V1, "avg_log2FC"] >= -0.1 | is.na(deas_clusters$g3_hiPS6$`1`[downreg_0$V1, "avg_log2FC"]))), "V1"],
+                                    downreg_0[which(deas_clusters$g1_hiPS6$`0`[downreg_0$V1, "avg_log2FC"] < -0.5 &
+                                                    (deas_clusters$g1_hiPS6$`1`[downreg_0$V1, "avg_log2FC"] >= -0.1 | is.na(deas_clusters$g1_hiPS6$`1`[downreg_0$V1, "avg_log2FC"]))), "V1"]),
+                          downreg_0[which(deas_clusters$g3_hiPS48$`0`[downreg_0$V1, "avg_log2FC"] < -0.5 &
+                                          (deas_clusters$g3_hiPS48$`1`[downreg_0$V1, "avg_log2FC"] >= -0.1 | is.na(deas_clusters$g3_hiPS48$`1`[downreg_0$V1, "avg_log2FC"]))), "V1"])
+# CCDC71L
+
+# Only downregulated in cluster 1 and not in cluster 0 (>= -0.1 or NA) in gRNA1, 2, and in hiPS48.
+downreg_1_only <- intersect(intersect(downreg_1[which(deas_clusters$g3_hiPS6$`1`[downreg_1$V1, "avg_log2FC"] < -0.5 &
+                                                    (deas_clusters$g3_hiPS6$`0`[downreg_1$V1, "avg_log2FC"] >= -0.1 | is.na(deas_clusters$g3_hiPS6$`0`[downreg_1$V1, "avg_log2FC"]))), "V1"],
+                                    downreg_1[which(deas_clusters$g1_hiPS6$`1`[downreg_1$V1, "avg_log2FC"] < -0.5 &
+                                                    (deas_clusters$g1_hiPS6$`0`[downreg_1$V1, "avg_log2FC"] >= -0.1 | is.na(deas_clusters$g1_hiPS6$`0`[downreg_1$V1, "avg_log2FC"]))), "V1"]),
+                          downreg_1[which(deas_clusters$g3_hiPS48$`1`[downreg_1$V1, "avg_log2FC"] < -0.5 &
+                                          (deas_clusters$g3_hiPS48$`0`[downreg_1$V1, "avg_log2FC"] >= -0.1 | is.na(deas_clusters$g3_hiPS48$`0`[downreg_1$V1, "avg_log2FC"]))), "V1"])
+# "AC020891.2" "AL022341.2" "AC105230.1" "ALOX5"      "AC005670.1" "TRHDE-AS1"  "SEPTIN4"    "SNX22"      "AL359851.1" "AC007608.3" "GCHFR"      "AC092445.1" "RALY-AS1"  "AC113404.1" "AC012146.1" "AL133335.1"
+
+upreg_0$type <- ifelse(upreg_0$V1 %in% upreg_1$V1, "upreg_both", 
+                       ifelse(upreg_0$V1 %in% upreg_0_only, "upreg_0", "upreg_both"))
+upreg_1$type <- ifelse(upreg_1$V1 %in% upreg_0$V1, "upreg_both", 
+                       ifelse(upreg_1$V1 %in% upreg_1_only, "upreg_1", "upreg_both"))
+downreg_0$type <- ifelse(downreg_0$V1 %in% downreg_1$V1, "downreg_both", 
+                         ifelse(downreg_0$V1 %in% downreg_0_only, "downreg_0", "downreg_both"))
+downreg_1$type <- ifelse(downreg_1$V1 %in% downreg_0$V1, "downreg_both", 
+                         ifelse(downreg_1$V1 %in% downreg_1_only, "downreg_1", "downreg_both"))
+
+deg <- rbind(upreg_0,
+             upreg_1,
+             downreg_0,
+             downreg_1)
+deg <- unique(deg)
+colnames(deg)[1] <- "deg"
+rownames(deg) <- deg$deg
+
+upreg_both <- deg[which(deg$type == "upreg_both"),"deg"]
+downreg_both <- deg[which(deg$type == "downreg_both"),"deg"]
+
+# Both up or downregulated in cluster 0 and 1
+upreg_both <- upreg_both[which(deas_clusters$g3_hiPS6$`0`[upreg_both, "avg_log2FC"] > 0.5 &
+                                  deas_clusters$g3_hiPS6$`1`[upreg_both, "avg_log2FC"] > 0.5 &
+                                  deas_clusters$g1_hiPS6$`0`[upreg_both, "avg_log2FC"] > 0.5 &
+                                  deas_clusters$g1_hiPS6$`1`[upreg_both, "avg_log2FC"] > 0.5 &
+                                  deas_clusters$g3_hiPS48$`0`[upreg_both, "avg_log2FC"] > 0.5 &
+                                  deas_clusters$g3_hiPS48$`1`[upreg_both, "avg_log2FC"] > 0.5)]
+
+downreg_both <- downreg_both[which(deas_clusters$g3_hiPS6$`0`[downreg_both, "avg_log2FC"] < -0.5 &
+                                  deas_clusters$g3_hiPS6$`1`[downreg_both, "avg_log2FC"] < -0.5 &
+                                  deas_clusters$g1_hiPS6$`0`[downreg_both, "avg_log2FC"] < -0.5 &
+                                  deas_clusters$g1_hiPS6$`1`[downreg_both, "avg_log2FC"] < -0.5 &
+                                  deas_clusters$g3_hiPS48$`0`[downreg_both, "avg_log2FC"] < -0.5 &
+                                  deas_clusters$g3_hiPS48$`1`[downreg_both, "avg_log2FC"] < -0.5)]
+
+deg <- deg[which(deg$type %in% c("upreg_0", "upreg_1", "downreg_0", "downreg_1") | deg$deg %in% upreg_both | deg$deg %in% downreg_both),]
+
+```
+
+
+```{r}
+g3_hiPS6_0_deg_df <- deas_clusters$g3_hiPS6$`0`[which(deas_clusters$g3_hiPS6$`0`$gene %in% deg$deg),]
+g3_hiPS6_1_deg_df <- deas_clusters$g3_hiPS6$`1`[which(deas_clusters$g3_hiPS6$`1`$gene %in% deg$deg),]
+g1_hiPS6_0_deg_df <- deas_clusters$g1_hiPS6$`0`[which(deas_clusters$g1_hiPS6$`0`$gene %in% deg$deg),]
+g1_hiPS6_1_deg_df <- deas_clusters$g1_hiPS6$`1`[which(deas_clusters$g1_hiPS6$`1`$gene %in% deg$deg),]
+g3_hiPS48_0_deg_df <- deas_clusters$g3_hiPS48$`0`[which(deas_clusters$g3_hiPS48$`0`$gene %in% deg$deg),]
+g3_hiPS48_1_deg_df <- deas_clusters$g3_hiPS48$`1`[which(deas_clusters$g3_hiPS48$`1`$gene %in% deg$deg),]
+
+g3_hiPS6_0_deg_df$type <- "g3_hiPS6_0"
+g3_hiPS6_1_deg_df$type <- "g3_hiPS6_1"
+g1_hiPS6_0_deg_df$type <- "g1_hiPS6_0"
+g1_hiPS6_1_deg_df$type <- "g1_hiPS6_1"
+g3_hiPS48_0_deg_df$type <- "g3_hiPS48_0"
+g3_hiPS48_1_deg_df$type <- "g3_hiPS48_1"
+
+cluster_0_1_deg_df <- rbind(g3_hiPS6_0_deg_df,
+                            g3_hiPS6_1_deg_df,
+                            g1_hiPS6_0_deg_df,
+                            g1_hiPS6_1_deg_df,
+                            g3_hiPS48_0_deg_df,
+                            g3_hiPS48_1_deg_df)
+
+# upreg_cluster_0_1_deg_df[is.na(upreg_cluster_0_1_deg_df$avg_log2FC), "avg_log2FC"] <- 0
+cluster_0_1_deg_df <- unique(cluster_0_1_deg_df)
+cluster_0_1_deg_df_dcast <- reshape2::dcast(cluster_0_1_deg_df[,c("avg_log2FC", "type", "gene")], formula = gene~type, value.var = "avg_log2FC")
+
+cluster_0_1_deg_df_dcast[is.na(cluster_0_1_deg_df_dcast)] <- 0
+rownames(cluster_0_1_deg_df_dcast) <- cluster_0_1_deg_df_dcast$gene
+cluster_0_1_deg_df_dcast <- cluster_0_1_deg_df_dcast[,-1]
+
+bk_neg <- seq(-20,0, length.out=50)
+bk_pos <- seq(0,3.5, length.out=50)
+bk <- c(bk_neg, bk_pos)
+bk <- unique(bk)
+color_pos <- colorRampPalette(c("white", "red"))(50)
+color_neg <- colorRampPalette(c("blue", "white"))(50)
+
+
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/downreg_genes_cluster_0_1.pdf", height = 15, width = 7)
+pheatmap(cluster_0_1_deg_df_dcast[deg[which(startsWith(deg$type, "downreg_both")),"deg"], c("g3_hiPS6_0", "g1_hiPS6_0", "g3_hiPS48_0", "g3_hiPS6_1", "g1_hiPS6_1", "g3_hiPS48_1")], breaks = bk, color = c(color_neg, color_pos), display_numbers = F, cluster_rows = F, annotation_row = deg[,"type", drop=F], cluster_cols = F, border_color = NA)
+# dev.off()
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/upreg_genes_cluster_0_1.pdf", height = 7, width = 7)
+pheatmap(cluster_0_1_deg_df_dcast[deg[which(startsWith(deg$type, "upreg_both")),"deg"], c("g3_hiPS6_0", "g1_hiPS6_0", "g3_hiPS48_0", "g3_hiPS6_1", "g1_hiPS6_1", "g3_hiPS48_1")], breaks = bk, color = c(color_neg, color_pos), display_numbers = F, cluster_rows = F, annotation_row = deg[,"type", drop=F], cluster_cols = F, border_color = NA)
+# dev.off()
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/upreg_genes_cluster_0_only.pdf", height = 4, width = 7)
+pheatmap(cluster_0_1_deg_df_dcast[deg[which(endsWith(deg$type, "0")),"deg"], c("g3_hiPS6_0", "g1_hiPS6_0", "g3_hiPS48_0", "g3_hiPS6_1", "g1_hiPS6_1", "g3_hiPS48_1")], breaks = bk, color = c(color_neg, color_pos), display_numbers = F, cluster_rows = F, annotation_row = deg[,"type", drop=F], cluster_cols = F, gaps_col = 3, gaps_row = 2, border_color = NA)
+# dev.off()
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/upreg_genes_cluster_1_only.pdf", height = 7, width = 7)
+pheatmap(cluster_0_1_deg_df_dcast[deg[which(endsWith(deg$type, "1")),"deg"], c("g3_hiPS6_0", "g1_hiPS6_0", "g3_hiPS48_0", "g3_hiPS6_1", "g1_hiPS6_1", "g3_hiPS48_1")], breaks = bk, color = c(color_neg, color_pos), display_numbers = F, cluster_rows = F, annotation_row = deg[,"type", drop=F], cluster_cols = F, gaps_col = 3, gaps_row = 2, scale = "row", border_color = NA)
+# dev.off()
+```
+
+## Commonly down / up regulated genes: Overrepresentation test
+
+### Examples of upregulated genes among all experiments which are core enrichment in these terms
+
+```{r}
+universe <- rownames(crispri_org)
+set.seed(7)
+library(clusterProfiler)
+library(org.Hs.eg.db)
+
+go_enrich_upreg_cluster_1 <- enrichGO(gene = c(deg[which(startsWith(deg$type, "upreg_both") | startsWith(deg$type, "upreg_1")),"deg"]), 
+                                        OrgDb = org.Hs.eg.db, 
+                                        universe = universe,
+                                        keyType = 'SYMBOL', 
+                                        readable = T,
+                                        ont = "ALL",
+                                        pvalueCutoff = 0.05, 
+                                        qvalueCutoff = 0.10)
+
+go_enrich_upreg_cluster_0 <- enrichGO(gene = c(deg[which(startsWith(deg$type, "upreg_both") | startsWith(deg$type, "upreg_0")),"deg"]), 
+                                        OrgDb = org.Hs.eg.db, 
+                                        universe = universe,
+                                        keyType = 'SYMBOL', 
+                                        readable = T,
+                                        ont = "ALL",
+                                        pvalueCutoff = 0.05, 
+                                        qvalueCutoff = 0.10)
+
+
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/goenrich_upreg_cluster_0_1_cluster.pdf", height = 15, width = 7)
+dotplot(go_enrich_upreg_cluster_0, showCategory = 50) + ggtitle("Upregulated genes in cluster 0")
+dotplot(go_enrich_upreg_cluster_1, showCategory = 50) + ggtitle("Upregulated genes in cluster 1")
+# dev.off()
+
+# write.xlsx(list("upreg_cluster_0" = go_enrich_upreg_cluster_0@result,
+#                 "upreg_cluster_1" = go_enrich_upreg_cluster_1@result), "/Volumes/MyPassport/CRISPRi_L1s/10X/results/tables/goenrich_cluster_0_1_cluster.xlsx")
+
+VlnPlot(crispri_org_join, group.by = "condition_cell_line_cluster", features = c("AKAP6", "ADCY2", "PDE4B"))
+```
+
+

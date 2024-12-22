@@ -1,0 +1,189 @@
+---
+title: "L1-CRISPRi organoids: TE pseudobulk sizefactors"
+output: html_notebook
+---
+
+This markdown relates to the visualization of pseudobulk quantification of TEs in day 15 cerebral organoids.
+
+We need to calculate sizeFactors per pseudobulked clusters to normalize TEs using unique mapping (crispri_org_pseudobulk_uniq.Rmd).
+
+## Functions
+
+Handy functions to plot featureplots in pseudobulks
+
+```{r}
+blues <- brewer.pal(9, 'Blues')[3:9]
+pseudobulk_gene <- function(df, gene, minimum = NA, maximum = NA, midpoint = NA, scaled = T){
+  tmp <- df[which(df$gene_name == gene),-1]
+  rownames(tmp) <- tmp[,ncol(tmp)]
+  tmp <- tmp[,-ncol(tmp)]
+  tmp <- t(tmp)
+  # umap_tmp <- umap[which(umap$region == region),]
+  tmp <- merge(crispri_umap, tmp, by.x="sample_cluster", by.y="row.names")
+  if(scaled){
+    minimum = ifelse(is.na(minimum), log2(min(tmp[,gene])+1), minimum)
+    maximum = ifelse(is.na(maximum), log2(max(tmp[,gene])+1) - 2*(sd(log2((tmp[,gene])+1))), maximum)
+    midpoint = maximum/2
+    tmp[,gene] <- ifelse(tmp[,gene] > maximum, maximum, tmp[,gene])
+    plt <- tmp %>%
+      arrange(get(gene)) %>%
+      ggplot(aes(x=umap_1, y=umap_2, color=log2(get(gene)+1))) + geom_point(size=0.4) 
+  }else{
+    minimum = ifelse(is.na(minimum), min(tmp[,gene]), minimum)
+    maximum = ifelse(is.na(maximum), max(tmp[,gene]) - 2*(sd((tmp[,gene]))), maximum)
+    midpoint = maximum/2
+    tmp[,gene] <- ifelse(tmp[,gene] > maximum, maximum, tmp[,gene])
+    plt <- tmp %>%
+      arrange(get(gene)) %>%
+      ggplot(aes(x=umap_1, y=umap_2, color=get(gene))) + geom_point(size=0.4) 
+  }
+  plt <- plt + theme_bw() + 
+    scale_colour_gradient2(limits = c(minimum, maximum), high = "#1e386c", low = "#bfdbf0", mid = "#0394cb", midpoint = midpoint) +
+    labs(color = gene) +
+    facet_wrap(.~condition) +
+    ggtitle(gene) +
+    theme(axis.line = element_line(colour = "lightgrey"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_rect(colour = "lightgrey", fill=NA),
+          panel.background = element_blank(),
+          axis.title=element_blank(),
+          axis.text=element_blank(),
+          axis.ticks=element_blank(),
+          plot.title = element_text(face = "bold"))
+  return(plt)
+}
+
+pseudobulk_TE <- function(df, TE, minimum = NA, maximum = NA, midpoint = NA, scaled=T){
+  tmp <- df[which(df$TE_subfamily == TE),]
+  rownames(tmp) <- tmp[,ncol(tmp)]
+  tmp <- tmp[,-ncol(tmp)]
+  tmp <- t(tmp)
+  tmp <- merge(crispri_umap, tmp, by.x="sample_cluster", by.y="row.names")
+  if(scaled){
+    minimum = ifelse(is.na(minimum), min(log2(tmp[,TE]+1)), minimum)
+    maximum = max(log2(tmp[,TE]+1))#ifelse(is.na(maximum), log2(max(tmp[,TE])+1) - 2*(sd(log2((tmp[,TE])+1))), maximum)
+    midpoint = minimum + ((maximum - minimum)/2)
+    tmp[,TE] <- ifelse(log2(tmp[,TE]+1) > maximum, maximum, log2(tmp[,TE]+1))
+    plt <- tmp %>%
+      arrange(get(TE)) %>%
+      ggplot(aes(x=umap_1, y=umap_2, color=get(TE))) + geom_point(size=0.4) 
+  }else{
+    minimum = min(tmp[,TE])#ifelse(is.na(minimum), min(tmp[,TE]), minimum)
+    maximum =  max(tmp[,TE])#ifelse(is.na(maximum), max(tmp[,TE]) - 2*(sd(tmp[,TE])), maximum)
+    midpoint = maximum/2
+    tmp[,TE] <- ifelse(tmp[,TE] > maximum, maximum, tmp[,TE])
+    plt <- tmp %>%
+      arrange(get(TE)) %>%
+      ggplot(aes(x=umap_1, y=umap_2, color=get(TE))) + geom_point(size=0.4) 
+  }
+  plt <- plt + theme_bw() + 
+    facet_wrap(.~condition) +
+    scale_colour_gradient2(limits = c(minimum, maximum), high = "#1e386c", low = "#bfdbf0", mid = "#0394cb", midpoint = midpoint) +
+    labs(color = TE) +
+    ggtitle(TE) +
+    theme(axis.line = element_line(colour = "lightgrey"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_rect(colour = "lightgrey", fill=NA),
+          panel.background = element_blank(),
+          axis.title=element_blank(),
+          axis.text=element_blank(),
+          axis.ticks=element_blank(),
+          plot.title = element_text(face = "bold"))
+  return(plt)
+}
+
+
+```
+
+## Read data
+
+TEtranscripts' gene quantification per pseudobulked clusters.
+
+```{r}
+library(data.table)
+library(stringr)
+library(DESeq2)
+library(ggplot2)
+library(dplyr)
+library(RColorBrewer)
+
+path <- "/Volumes/MyPassport/CRISPRi_L1s/10X/3_combinedUMAP_perCluster_res0.1/clusterPipeline/TEcounts/multiple/"
+counts <- list()
+
+files <- list.files(path, recursive = T)
+for(i in 1:length(files)){
+  file <- files[i]
+  if(i == 1){
+    counts <- fread(paste(path, file, sep="/"), data.table = F)  
+    colnames(counts)[2] <- str_remove_all(file, pattern = "_.cntTable")
+  }else{
+    tmp <- fread(paste(path, file, sep="/"), data.table = F)  
+    colnames(tmp)[2] <- str_remove_all(file, pattern = "_.cntTable")
+    if(all(counts$`gene/TE` == tmp$`gene/TE`)){
+      counts <- cbind(counts, tmp[,2,drop=F])
+    }else{
+      counts <- merge(counts, tmp, by="gene/TE")
+    }
+  }
+}
+rownames(counts) <- counts$`gene/TE`
+
+```
+
+## Subset count matrices to just gene counts and set samplesheet
+
+```{r}
+gene_counts <- list()
+gene_counts <- counts[which(startsWith(counts$`gene/TE`, "ENSG")),]
+
+samplesheet <- fread("/Volumes/MyPassport/CRISPRi_L1s/10X/metadata.tab", data.table = F)
+samplesheet$sample_name <- paste("crispri_", samplesheet$sample, sep="")
+
+sample_cluster <- data.frame(cluster = colnames(gene_counts)[-1])
+
+sample_cluster$cluster_number <- sapply(str_split(sample_cluster$cluster, "_"), tail, 1)
+sample_cluster$sample_name <- gsub('.{2}$', '', sample_cluster$cluster)
+# sample_cluster$sample_name <- ifelse(endsWith(sample_cluster$sample_name, "_"), gsub('.{1}$', '', sample_cluster$sample_name), sample_cluster$sample_name)
+
+samplesheet <- merge(samplesheet, sample_cluster, by="sample_name")
+rownames(samplesheet) <- samplesheet$cluster
+
+unique(samplesheet$sample_name)
+samplesheet_g3 <- samplesheet[which(samplesheet$guide %in% c("gRNA3", "LacZ")),]
+
+```
+
+## Calculate sizefactors per cluster and write to file
+
+```{r}
+gene_annotation <- fread("/Volumes/MyPassport/annotations/human/gencode/v38/gencode.v38.annotation.gene_names.tab", skip=1, header = F)
+colnames(gene_annotation) <- c("gene_id", "gene_name", "gene_type")
+gene_dds <- list()
+gene_res <- list()
+gene_res_df <- list()
+
+for(i in as.character(unique(samplesheet_g3$cluster_number))){
+  samplesheet_tmp <- samplesheet_g3[which(samplesheet_g3$cluster_number == i),]
+  gene_dds[[i]] <- DESeqDataSetFromMatrix(gene_counts[,rownames(samplesheet_tmp)], samplesheet_tmp, design =  ~ guide)
+  gene_dds[[i]]$guide <- relevel(gene_dds[[i]]$guide, "LacZ")
+  gene_dds[[i]] <- DESeq(gene_dds[[i]])
+  gene_res[[i]] <- lfcShrink(gene_dds[[i]], "guide_gRNA3_vs_LacZ")
+  gene_res_df[[i]] <- as.data.frame(gene_res[[i]])
+  gene_res_df[[i]] <- merge(gene_res_df[[i]], gene_annotation[,1:2], by.x="row.names", by.y="gene_id")
+  print(i)
+}
+
+sizeFactors <- data.frame()
+for(i in (names(gene_dds))){
+  sizeFactors <- rbind(sizeFactors, data.frame(sizeFactor = gene_dds[[i]]$sizeFactor, 
+                                               cluster = i,
+                                               samples = names(gene_dds[[i]]$sizeFactor)))
+} 
+openxlsx::write.xlsx(sizeFactors, "/Volumes/MyPassport/CRISPRi_L1s/10X/results/tables/sizeFactors_pseudobulk.xlsx")
+
+
+```
+
+
