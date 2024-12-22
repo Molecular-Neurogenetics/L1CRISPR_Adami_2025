@@ -138,7 +138,7 @@ rownames(counts) <- counts$`gene/TE`
 gene_counts <- list()
 gene_counts <- counts[which(startsWith(counts$`gene/TE`, "ENSG")),]
 
-samplesheet <- fread("/Volumes/MyPassport/CRISPRi_L1s/10X/metadata.tab", data.table = F)
+samplesheet <- fread("/Volumes/MyPassport/CRISPRi_L1s/10X/samplesheet_L1crispr_10X.tab", data.table = F)
 samplesheet$sample_name <- paste("crispri_", samplesheet$sample, sep="")
 
 sample_cluster <- data.frame(cluster = colnames(gene_counts)[-1])
@@ -181,7 +181,7 @@ for(i in (names(gene_dds))){
                                                cluster = i,
                                                samples = names(gene_dds[[i]]$sizeFactor)))
 } 
-openxlsx::write.xlsx(sizeFactors, "/Volumes/MyPassport/CRISPRi_L1s/10X/results/tables/sizeFactors_pseudobulk.xlsx")
+openxlsx::write.xlsx(sizeFactors, "/Volumes/MyPassport/CRISPRi_L1s/10X/results/tables/gene_sizeFactors_pseudobulk.xlsx")
 
 
 ```

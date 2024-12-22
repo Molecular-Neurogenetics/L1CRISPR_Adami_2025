@@ -112,7 +112,7 @@ library(ggplot2)
 samplesheet <- fread("/Volumes/MyPassport/CRISPRi_L1s/10X/metadata.tab", data.table = F, fill=T)
 samplesheet$sample_name <- paste("crispri_", samplesheet$sample, sep="")
 
-sizeFactors <- openxlsx::read.xlsx("/Volumes/MyPassport/CRISPRi_L1s/10X/results/tables/sizeFactors_pseudobulk.xlsx")
+sizeFactors <- openxlsx::read.xlsx("/Volumes/MyPassport/CRISPRi_L1s/10X/results/tables/gene_sizeFactors_pseudobulk.xlsx")
 
 sizeFactors$sample_name <- gsub('.{2}$', '', sizeFactors$samples)
 sizeFactors$sample_name <- ifelse(endsWith(sizeFactors$sample_name, "_"), gsub('.{1}$', '', sizeFactors$sample_name), sizeFactors$sample_name)
