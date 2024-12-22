@@ -1,0 +1,358 @@
+---
+title: "CRISPR L1s differential expression analysis of TEs"
+output: html_notebook
+---
+
+Here we perform differential expression analysis (DEA) of all TEs using a unique mapping approach for our CRISPR experiments targeting young L1 elements.
+
+The experimental design is CRISPR inhibition on iPSC where L1s are usually highly expressed, and CRISPR activation on neural progenitor cells.
+The two experiments were sequenced in two sequencing runs each (three sequencing runs total). 
+
+Before we start, I load libraries and define some helper functions to visualize the effect as a mean plot (credits to Per Brattås! who wrote the original code for it)
+```{r class.source = 'fold-hide'}
+library(data.table)
+library(ggplot2)
+library(ggpubr)
+library(stringr)
+library(DESeq2)
+## getSignName ##
+# Get significantly different gene names. 
+# Taken from source code of the package deseqAbstraction which is no longer available on github.
+# Credits to Per L. Brattås
+# Parameters:
+# x = results object from deseq
+# p = padj threshold for significance
+# l = log2FC threshold for significance
+getSignName <- function(x,p,l=0) {
+  up <- x[!is.na(x$padj) & x$padj < p & x$log2FoldChange > l,]
+  down <- x[!is.na(x$padj) & x$padj < p & x$log2FoldChange < -l,]
+  return(list(up=rownames(up),down=rownames(down)))
+}
+## getAverage ##
+# Get average expression (normalized by median of ratios) of each of the conditions in a deseq object.
+# Taken from source code of the package deseqAbstraction which is no longer available on github.
+# Credits to Per L. Brattås
+# Parameters:
+# dds = deseq object
+getAverage <- function(dds) {
+  baseMeanPerLvl <- sapply( levels(dds$condition), function(lvl) rowMeans( counts(dds,normalized=TRUE)[,dds$condition == lvl] ) )
+  baseSDPerLvl <- sapply( levels(dds$condition), function(lvl) apply( counts(dds,normalized=TRUE)[,dds$condition == lvl],1,sd ) )
+  colnames(baseSDPerLvl) <- paste("st.dev:",colnames(baseSDPerLvl),sep="")
+  return(list(Mean=baseMeanPerLvl,SD=baseSDPerLvl))
+}
+
+meanPlot_cus <- function(exp,test,c1 = "condition 1",c2 = "condition 2",p=.05,l=0,id=F, ttl="", 
+                         repel=TRUE, col1="tomato", col2="darkturquoise", col3="grey", highlights=NA){
+  sign <- getSignName(x = test,p = p,l = l)
+  u <- sign$up
+  d <- sign$down
+  
+  #color up and down sign..
+  colVec <- ifelse(test = (rownames(exp) %in% u),
+                   yes = col1,
+                   no = ifelse(test = (rownames(exp) %in% d),
+                               yes = col2, no =col3))
+  colVec[is.na(colVec)] <- "steelblue" ## if NA make sure it's not counted as <p
+  #size of points
+  cexVec <- ifelse(test = (rownames(exp) %in% u),
+                   yes = 0.35,
+                   no = ifelse(test = (rownames(exp) %in% d),
+                               yes = 0.35, no = 0.3))
+  
+  exp_log <- as.data.frame(log2(exp[,c(c1, c2)] + 0.5))
+  exp_log$Name <- rownames(exp_log)
+  
+  exp_log$reg <- factor(ifelse(exp_log$Name %in% u, paste('upregulated in ', c1, ' (', length(u), ')', sep =''),
+                               ifelse(exp_log$Name %in% d, paste('downregulated in ', c1,' (', length(d), ')', sep =''), paste('not significant', ' (', (nrow(test) - length(u) - length(d)), ')', sep=''))))
+  
+  library(ggrepel)
+  if(length(d) == 0){
+      col2 = col3
+      col3 = col1
+  }
+  if(repel == TRUE){
+    plt <- ggplot(exp_log, aes(x=get(c2), y=get(c1), label=sapply(str_split(Name, ":"), `[[`, 1), color=reg)) + geom_point(aes(size=cexVec), alpha=0.7)+ scale_color_manual(values=c(col2, col3, col1))+ scale_size_continuous(range=c(1,2), guide="none")+ geom_text_repel(data = subset(exp_log, Name %in% u | Name %in% d))
+  }else{
+    plt <- ggplot(exp_log, aes(x=get(c2), y=get(c1), color=reg)) + geom_point(aes(size=cexVec), alpha=0.7)+ scale_color_manual(values=c(col2, col3, col1))+ scale_size_continuous(range=c(1,2), guide="none")
+  }
+  plt <- plt + labs(x=paste("log2(mean ",c2,")",sep=""), 
+                    y=paste("log2(mean ",c1,")",sep=""),
+                    title=paste(ttl, paste(c1," vs. ",c2,sep=""), sep = ': '),
+                    subtitle=paste("p-adj < ",p,", log2(fc) > ",l,sep=""))+ theme_bw() +
+    theme( plot.title = element_text( size=14, face="bold"), text = element_text(size=15), panel.grid.minor = element_blank(), panel.grid.major = element_blank(), legend.title=element_blank()) 
+  
+  
+  if(id==T) {
+    
+    identify(log2(exp[,1]),log2(exp[,2]),labels = rownames(exp))
+    
+  }
+  
+  if(!is.na(highlights)){
+    plt <- plt + geom_point(data=exp_log[highlights,], aes(x=get(c2), y=get(c1)), colour="gold", size=3, shape=1, stroke=1)
+  }
+  return(plt)
+  
+}
+```
+
+Here we load the metadata of the samples (and split them by experiment and guide), and the TE count matrices (`te_counts` with all counts).
+```{r}
+samplesheet <- fread("/Volumes/MyPassport/CRISPRi_L1s/samplesheet_L1crispr.tab", data.table = F, header = T)
+samplesheet <- samplesheet[which(!samplesheet$samples %in% c("AA11_Sai2_lv3775_B_CRISPRa_S11", "AA_Sai2_L1_CRISPRa_LV3776_c_S29")),]
+samplesheet_list <- split(samplesheet, f = list(samplesheet$cell, samplesheet$experiment, samplesheet$guide, samplesheet$seqnum))
+samplesheet_list <- samplesheet_list[sapply(samplesheet_list,nrow)>0] 
+
+samplesheet_comparisons <- list(
+  "hiPS6_crispri_g1" = rbind(samplesheet_list$hiPS6.crispri.g1.CTG_JGJSeq156_159_160truseq, 
+                             samplesheet_list$hiPS6.crispri.LacZ.CTG_JGJSeq156_159_160truseq),
+  "hiPS6_crispri_g2" = rbind(samplesheet_list$hiPS6.crispri.g2.CTG_JGJSeq205_207_208_214_truseq_2023_021,
+                             samplesheet_list$hiPS6.crispri.LacZ.CTG_JGJSeq205_207_208_214_truseq_2023_021),
+  "hiPS6_crispri_g3" = rbind(samplesheet_list$hiPS6.crispri.g3.CTG_JGJSeq205_207_208_214_truseq_2023_021,
+                             samplesheet_list$hiPS6.crispri.LacZ.CTG_JGJSeq205_207_208_214_truseq_2023_021),
+  "hiPS48_crispri_g3" = rbind(samplesheet_list$hiPS48.crispri.g3.testdata_ctg_2023_50,
+                              samplesheet_list$hiPS48.crispri.LacZ.testdata_ctg_2023_50),
+  "NES_crispra_g1" = rbind(samplesheet_list$NES.crispra.g1.CTG_JGJSeq156_159_160truseq,
+                           samplesheet_list$NES.crispra.NTC.CTG_JGJSeq156_159_160truseq),
+  "NES_crispra_g2" = rbind(samplesheet_list$NES.crispra.g2.CTG_JGJSeq233_237_250_257_2023_145,
+                           samplesheet_list$NES.crispra.LacZ.CTG_JGJSeq233_237_250_257_2023_145),
+  "NES_crispra_g3" = rbind(samplesheet_list$NES.crispra.g3.CTG_JGJSeq233_237_250_257_2023_145,
+                           samplesheet_list$NES.crispra.LacZ.CTG_JGJSeq233_237_250_257_2023_145),
+  "hiPS6_org_crispri_g1" = rbind(samplesheet_list$hiPS6_org.crispri.g1.CTG_2024_017_Seq296_297_305_315_bulkRNASeq,
+                                 samplesheet_list$hiPS6_org.crispri.LacZ.CTG_2024_017_Seq296_297_305_315_bulkRNASeq),
+  "hiPS6_org_crispri_g2" = rbind(samplesheet_list$hiPS6_org.crispri.g2.CTG_2024_017_Seq296_297_305_315_bulkRNASeq,
+                                 samplesheet_list$hiPS6_org.crispri.LacZ.CTG_2024_017_Seq296_297_305_315_bulkRNASeq),
+  "hiPS6_org_crispri_g3" = rbind(samplesheet_list$hiPS6_org.crispri.g3.CTG_JGJSeq233_237_250_257_2023_145,
+                                  samplesheet_list$hiPS6_org.crispri.LacZ.CTG_JGJSeq233_237_250_257_2023_145),
+  "hiPS6_org_crispri_g3_batch2" = rbind(samplesheet_list$hiPS6_org.crispri.g3.CTG_2024_017_Seq296_297_305_315_bulkRNASeq,
+                                 samplesheet_list$hiPS6_org.crispri.LacZ.CTG_2024_017_Seq296_297_305_315_bulkRNASeq),
+  "hiPS48_org_crispri_g3" = rbind(samplesheet_list$hiPS48_org.crispri.g3.CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX,
+                                  samplesheet_list$hiPS48_org.crispri.LacZ.CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX),
+  "hiPS6_org_crispra_g1" = rbind(samplesheet_list$hiPS6_org.crispra.g1.CTG_2024_017_Seq296_297_305_315_bulkRNASeq,
+                                 samplesheet_list$hiPS6_org.crispra.LacZ.CTG_2024_017_Seq296_297_305_315_bulkRNASeq),
+  "hiPS6_org_crispra_g2" = rbind(samplesheet_list$hiPS6_org.crispra.g2.CTG_2024_017_Seq296_297_305_315_bulkRNASeq,
+                                 samplesheet_list$hiPS6_org.crispra.LacZ.CTG_2024_017_Seq296_297_305_315_bulkRNASeq),
+  "hiPS6_org_crispra_g3" = rbind(samplesheet_list$hiPS6_org.crispra.g3.CTG_JGJSeq233_237_250_257_2023_145,
+                                  samplesheet_list$hiPS6_org.crispra.LacZ.CTG_JGJSeq233_237_250_257_2023_145),
+  "hiPS6_org_crispra_g3_batch2" = rbind(samplesheet_list$hiPS6_org.crispra.g3.CTG_2024_017_Seq296_297_305_315_bulkRNASeq,
+                                 samplesheet_list$hiPS6_org.crispra.LacZ.CTG_2024_017_Seq296_297_305_315_bulkRNASeq)
+)
+
+path <- "/Volumes/MyPassport/CRISPRi_L1s/TEcounts/multiple/"
+samples <- samplesheet$samples
+
+for(i in 1:length(samples)){
+  sample <- samples[i]
+  if(i == 1){
+    te_counts <- fread(paste(path, sample, ".cntTable", sep=""), data.table = F)    
+    colnames(te_counts)[ncol(te_counts)] <- sample
+    rownames(te_counts) <- te_counts$Geneid
+    row_order <- rownames(te_counts)
+  }else{
+    tmp <- fread(paste(path, sample, ".cntTable", sep=""), data.table = F)
+    colnames(tmp)[ncol(tmp)] <- sample
+    rownames(tmp) <- tmp$Geneid
+    te_counts <- cbind(te_counts[row_order,], tmp[row_order,sample,drop=F])
+  }
+}
+
+
+```
+
+As there are quite a bit of comparisons to be made (one per experiment, per guide), I looped this.
+```{r}
+te_dds_list <- list()
+te_res_list <- list()
+te_res_list_df <- list()
+te_exp_list <- list()
+rownames(te_counts) <- te_counts$`gene/TE`
+te_counts <- te_counts[which(!startsWith(te_counts$`gene/TE`, "ENSG")), ]
+for(i in names(samplesheet_comparisons)){
+  rownames(samplesheet_comparisons[[i]]) <- samplesheet_comparisons[[i]]$samples
+  print(i)
+  print(c("Batch: ", unique(samplesheet_comparisons[[i]]$seqnum)))
+  conditions <- unique(samplesheet_comparisons[[i]]$condition)
+  print(c("Conditions: ", conditions))
+
+  effect <- conditions[which(conditions != "Control")]
+  test <- paste("condition_", effect ,"_vs_Control", sep = "")
+  print(c("Test: ", test))
+
+  te_dds_list[[i]] <- DESeqDataSetFromMatrix(te_counts[,rownames(samplesheet_comparisons[[i]])], samplesheet_comparisons[[i]], design =  ~ condition)
+  te_dds_list[[i]]$condition <- relevel(te_dds_list[[i]]$condition, "Control")
+  te_dds_list[[i]] <- DESeq(te_dds_list[[i]])
+  te_res_list[[i]] <- lfcShrink(te_dds_list[[i]], test)
+  te_exp_list[[i]] <- getAverage(te_dds_list[[i]])
+  te_res_list_df[[i]] <- as.data.frame(te_res_list[[i]])
+}
+
+```
+
+Plots with ALL transposons are hardly informative for this particular experiment (and very heavy files), so I'll just plot L1PAs (1-8) on mean plots and volcano plots.
+
+Again, quite a bit of comparisons so I'll loop it.
+```{r}
+library(EnhancedVolcano)
+library(ggrepel)
+for (i in names(te_res_list_df)) te_res_list_df[[i]]$TE_id <- rownames(te_res_list_df[[i]])
+
+# Now, we visualize things ----
+volcano_plots_list <- list()
+mean_plots_list <- list()
+ma_plots_list <- list()
+for(i in names(te_res_list)){
+  tmp <- EnhancedVolcano(te_res_list[[i]], 
+                                             drawConnectors = T, 
+                                             lab = NA, 
+                                             x = 'log2FoldChange',
+                                             y = 'padj',
+                                             pCutoff = 0.05,
+                                             FCcutoff = 0.4)
+  tmp$data$Sig <- ifelse(tmp$data$log2FoldChange > 0.4 & tmp$data$Sig == "FC_P", "Upregulated", 
+                                             ifelse(tmp$data$log2FoldChange < -0.4 & tmp$data$Sig == "FC_P", "Downregulated", "Not significant"))
+  tmp$data$Sig <- paste(tmp$data$Sig, table(tmp$data$Sig)[tmp$data$Sig], sep = ": ")
+  
+  not_sig_lab <- unique(tmp$data$Sig)[startsWith(unique(tmp$data$Sig), "Not significant")]
+  up_sig_lab <- unique(tmp$data$Sig)[startsWith(unique(tmp$data$Sig), "Upregulated")]
+  down_sig_lab <- unique(tmp$data$Sig)[startsWith(unique(tmp$data$Sig), "Downregulated")]
+  
+  point_colours <- c("grey", "tomato", "darkturquoise")
+  point_sizes <- c(1,2,1)
+  
+  if(startsWith(i, "NES") | grepl("crispra", i)){# CRISPRa
+    names(point_colours) <- c(not_sig_lab, up_sig_lab, down_sig_lab)
+    names(point_sizes) <- c(not_sig_lab, up_sig_lab, down_sig_lab)
+  }else{ 
+    names(point_colours) <- c(not_sig_lab, down_sig_lab, up_sig_lab)
+    names(point_sizes) <- c(not_sig_lab, down_sig_lab, up_sig_lab)
+  }
+  
+  
+  title <- str_replace_all(i, pattern = "_", replacement = " ")
+  
+  tmp <- tmp$data
+  tmp$TE_subfamily <- sapply(str_split(ifelse(grepl("FL_L1", rownames(tmp)), paste("FL_", rownames(tmp), sep=""), rownames(tmp)), ":"), `[[`, 1)
+  tmp[which(startsWith(tmp$Sig, "Not significant")), "TE_subfamily"] <- NA
+  volcano_plots_list[[i]] <- ggplot(tmp, aes(x=log2FoldChange, y=-log10(padj), colour=Sig, size=Sig, label=TE_subfamily)) + geom_point(alpha=0.7) + geom_point(data=tmp[rownames(tmp) %in% c("L1HS:FL_L1:LINE", "L1PA2:FL_L1:LINE","L1PA3:FL_L1:LINE","L1PA4:FL_L1:LINE"),], aes(x=log2FoldChange, y=-log10(padj)), shape = 1, color="gold", size=3, stroke=1) + geom_text_repel(size=3) +
+    geom_vline(xintercept = 0.4, linetype="dotted") + geom_vline(xintercept = -0.4, linetype="dotted") + 
+    geom_hline(yintercept = -log10(0.05), linetype="dotted") + labs(colour="") + 
+    scale_color_manual(values = point_colours)  + 
+    scale_size_manual(values = point_sizes, guide="none") +
+    theme_bw() +
+    theme(text = element_text(size=15), panel.grid.minor = element_blank(), panel.grid.major = element_blank()) +
+    ggtitle(title)
+  
+  effect <- unique(samplesheet_comparisons[[i]][which(samplesheet_comparisons[[i]]$condition != "Control"),"condition"])
+  # mean_plots_list[[i]] <- meanPlot_cus(exp = te_exp_list[[i]]$Mean, 
+  #                                      test = te_res_list[[i]], 
+  #                                      c1 = effect, c2="Control", p = 0.05, l=0.4, ttl = title, repel = T, highlights = c("L1HS:L1:LINE", "L1PA2:L1:LINE", "L1PA3:L1:LINE", "L1PA4:L1:LINE")) 
+
+  ma_plots_list[[i]] <- ggplot(tmp, aes(x=log2(baseMean + 0.5), y=log2FoldChange, colour=Sig, size=Sig, label = TE_subfamily)) + 
+    geom_point(alpha=0.7) + 
+    geom_point(data=tmp[rownames(tmp) %in% c("L1HS:FL_L1:LINE", "L1PA2:FL_L1:LINE", "L1PA3:FL_L1:LINE", "L1PA4:FL_L1:LINE"),], aes(y=log2FoldChange, x=log2(baseMean + 0.5)), shape = 1, color="gold", size=3, stroke=1) + 
+    geom_text_repel(size=3) + 
+    theme_bw() + 
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
+    scale_color_manual(values = point_colours) + 
+    scale_size_manual(values = point_sizes, guide="none") + ggtitle(title) 
+}
+
+order <- c("hiPS6_crispri_g1",
+"hiPS6_crispri_g2",
+"hiPS6_crispri_g3",
+"hiPS48_crispri_g3",
+"NES_crispra_g1",
+"NES_crispra_g2",
+"NES_crispra_g3",
+"hiPS6_org_crispri_g1",
+"hiPS6_org_crispri_g2",
+"hiPS48_org_crispri_g3",
+"hiPS6_org_crispri_g3_batch2",
+"hiPS6_org_crispri_g3",
+"hiPS6_org_crispra_g1",
+"hiPS6_org_crispra_g2",
+"hiPS6_org_crispra_g3",
+"hiPS6_org_crispra_g3_batch2")
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/volcano_plots_TEsubfam.pdf", height = 4, width = 7)
+volcano_plots_list[order]
+dev.off()
+
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/mean_plots_TEsubfam.pdf", height = 4, width = 7)
+# mean_plots_list[order]
+# dev.off()
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/ma_plots_TEsubfam.pdf", height = 4, width = 7)
+ma_plots_list[order]
+dev.off()
+
+library(openxlsx)
+write.xlsx(te_res_list_df, file = "/Volumes/MyPassport/CRISPRi_L1s/results/tables/TE_subfam_DEA.xlsx")
+```
+
+```{r}
+sizefactors <- fread("/Volumes/MyPassport/CRISPRi_L1s/results/tables/gene_sizeFactors.tab", data.table = F)
+colnames(sizefactors) <- c("sample", "sizeFactor")
+rownames(sizefactors) <- sizefactors$sample
+
+rownames(te_counts) <- te_counts$`gene/TE`
+te_counts_norm <- te_counts[,samples]
+te_counts_norm[] <- mapply('/', te_counts_norm[,samples], sizefactors[samples,"sizeFactor"])
+
+library(pheatmap)
+rownames(samplesheet) <- samplesheet$samples
+samplesheet$cell <- factor(samplesheet$cell, levels = c("hiPS6", "hiPS48","hiPS6_org", "hiPS48_org","NES", "hiPS6_WT", "hiPS48_WT"))
+samplesheet <- samplesheet[order(samplesheet$condition, samplesheet$guide, samplesheet$cell, samplesheet$experiment),]
+samplesheet_ips <- samplesheet[which(samplesheet$cell %in% c("hiPS48", "hiPS6")),]
+samplesheet_WT_ips <- samplesheet[which(samplesheet$LV == "WT"),]
+samplesheet_LacZ_NES <- samplesheet[which(samplesheet$cell == "NES" & samplesheet$LV == "LacZ"),]
+samplesheet_NES <- samplesheet[which(samplesheet$cell == "NES"),]
+
+samplesheet_org <- samplesheet[which(endsWith(as.character(samplesheet$cell), "_org")),]
+samplesheet_org_CRISPRi <- samplesheet_org[which(samplesheet_org$experiment == "crispri"),]
+samplesheet_org_CRISPRa <- samplesheet_org[which(samplesheet_org$experiment == "crispra"),]
+
+L1s <- c("L1HS:FL_L1:LINE", "L1HS:L1:LINE", "L1PA2:FL_L1:LINE", "L1PA2:L1:LINE", "L1PA3:FL_L1:LINE", "L1PA3:L1:LINE", "L1PA4:FL_L1:LINE", "L1PA4:L1:LINE", "L1PA5:L1:LINE", "L1PA6:L1:LINE",
+         "L1PA7:L1:LINE", "L1PA8:L1:LINE", "L1PA10:L1:LINE", "L1PA11:L1:LINE", "L1PA12:L1:LINE",
+         "L1PA13:L1:LINE", "L1PA14:L1:LINE", "L1PA15:L1:LINE", "L1PA15-16:L1:LINE", "L1PA17:L1:LINE", 
+         "L1MEb:L1:LINE", "L1ME3E:L1:LINE", "L1MA8:L1:LINE", "L1MEf:L1:LINE", "X9_LINE:L1:LINE", "L1M3b:L1:LINE",
+         "L1M3a:L1:LINE", "L1MEg2:L1:LINE", "L1MEg1:L1:LINE", "L1M2c:L1:LINE", "L1M2a1:L1:LINE", "L1M2a:L1:LINE",
+         "L1P:L1:LINE", "L1P3b:L1:LINE", "L1P4b:L1:LINE", "L1P4c:L1:LINE", "L1P4d:L1:LINE", "L1P4e:L1:LINE", 
+         "L1P5:L1:LINE")
+
+samplesheet_ips_crispri_hips6 <- samplesheet_ips[which(samplesheet_ips$cell == "hiPS6" & samplesheet_ips$guide != "g2"),]
+samplesheet_ips_crispri_hips6_example_samples_exp1 <- samplesheet_ips[which(samplesheet_ips$samples %in% c("AA42_h6_lv3599_1_ctrl_S1", "AA44_h6_lv3599_2_ctrl_S2", "AA46_h6_lv3599_3_ctrl_S3", "AA30_h6_lv3822_1_CRISPRi_S7", "AA32_h6_lv3822_2_CRISPRi_S8", "AA34_h6_lv3822_3_CRISPRi_S9")),]
+samplesheet_ips_crispri_hips6_example_samples_exp2 <- samplesheet_ips[which(samplesheet_ips$samples %in% c("AA135_hiPS6_lv3599_a_L1_LacZ_S18", "AA136_hiPS6_lv3599_b_L1_LacZ_S19", "AA137_hiPS6_lv3599_c_L1_LacZ_S20", "AA141_hiPS6_lv3824_a_L1_CRISPRi_S24", "AA142_hiPS6_lv3824_b_L1_CRISPRi_S25", "AA143_hiPS6_lv3824_c_L1_CRISPRi_S26")),]
+samplesheet_ips_crispri_hips48 <- samplesheet_ips[which(samplesheet_ips$cell == "hiPS48"),]
+library(pheatmap)
+pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/heatmap_L1PA_TEsubfam.pdf", height = 12)
+pheatmap(log2(te_counts_norm[L1s,rownames(samplesheet_WT_ips)] + 0.5), cluster_rows = F, cluster_cols = F, annotation_col = samplesheet_WT_ips[,c("cell"), drop=F], show_colnames = T, gaps_col = 3, scale = "row", main = "WT iPSC (scale: row)")
+pheatmap(log2(te_counts_norm[L1s,rownames(samplesheet_ips)] + 0.5), cluster_rows = F, cluster_cols = F, annotation_col = samplesheet_ips[,c("cell", "experiment", "guide")], show_colnames = T, gaps_col = 9, scale = "row", main = "CRISPRi iPSC (scale: row)")
+pheatmap(log2(te_counts_norm[L1s,rownames(samplesheet_ips_crispri_hips6)] + 0.5), cluster_rows = F, cluster_cols = F, annotation_col = samplesheet_ips_crispri_hips6[,c("cell", "experiment", "guide")], show_colnames = T, gaps_col = 6, scale = "row", main = "CRISPRi iPSC (scale: row)")
+pheatmap(log2(te_counts_norm[L1s,rownames(samplesheet_ips_crispri_hips6_example_samples_exp1)] + 0.5), cluster_rows = F, cluster_cols = F, annotation_col = samplesheet_ips_crispri_hips6_example_samples_exp1[,c("cell", "experiment", "guide")], show_colnames = T, gaps_col = 3, scale = "row", main = "CRISPRi iPSC (scale: row)")
+pheatmap(log2(te_counts_norm[L1s,rownames(samplesheet_ips_crispri_hips6_example_samples_exp2)] + 0.5), cluster_rows = F, cluster_cols = F, annotation_col = samplesheet_ips_crispri_hips6_example_samples_exp2[,c("cell", "experiment", "guide")], show_colnames = T, gaps_col = 3, scale = "row", main = "CRISPRi iPSC (scale: row)")
+pheatmap(log2(te_counts_norm[L1s,rownames(samplesheet_ips_crispri_hips48)] + 0.5), cluster_rows = F, cluster_cols = F, annotation_col = samplesheet_ips_crispri_hips48[,c("cell", "experiment", "guide")], show_colnames = T, gaps_col = 3, scale = "row", main = "CRISPRi iPSC (scale: row)")
+pheatmap(log2(te_counts_norm[L1s,rownames(samplesheet_NES)] + 0.5), cluster_rows = F, cluster_cols = F, annotation_col = samplesheet_NES[,c("cell", "experiment", "guide")], show_colnames = T, gaps_col = 9, scale = "row", main = "CRISPRa NES (scale: row)")
+pheatmap(log2(te_counts_norm[L1s,rownames(samplesheet_org_CRISPRi)] + 0.5), cluster_rows = F, cluster_cols = F, annotation_col = samplesheet_org_CRISPRi[,c("cell", "experiment", "guide")], show_colnames = T, gaps_col = 9, scale = "row", main = "CRISPRi organoids (scale: row)")
+
+pheatmap(log2(te_counts_norm[L1s,c(rownames(samplesheet_WT_ips), rownames(samplesheet_org_CRISPRi[which(samplesheet_org_CRISPRi$guide == "LacZ" & !startsWith(samplesheet_org_CRISPRi$samples, "MN07")),]))] + 0.5), cluster_rows = F, cluster_cols = F, annotation_col = rbind(samplesheet_org_CRISPRi[,c("cell", "experiment", "guide")],samplesheet_WT_ips[,c("cell", "experiment", "guide")]), show_colnames = T, gaps_col = 9, scale = "row", main = "hiPS + organoids (scale: row)")
+
+pheatmap(log2(te_counts_norm[L1s,rownames(samplesheet_org_CRISPRi)[c(1:3,7:nrow(samplesheet_org_CRISPRi))]] + 0.5), cluster_rows = F, cluster_cols = F, annotation_col = samplesheet_org_CRISPRi[,c("cell", "experiment", "guide")], show_colnames = T, gaps_col = 6, scale = "row", main = "CRISPRi organoids (scale: row, exclude outliers)")
+pheatmap(log2(te_counts_norm[L1s,rownames(samplesheet_org_CRISPRa)] + 0.5), cluster_rows = F, cluster_cols = F, annotation_col = samplesheet_org_CRISPRa[,c("cell", "experiment", "guide")], show_colnames = T, gaps_col = 6, scale = "row", main = "CRISPRa organoids (scale: row)")
+
+pheatmap(log2(te_counts_norm[L1s,c(rownames(samplesheet_WT_ips), rownames(samplesheet_LacZ_NES))] + 0.5), cluster_rows = F, cluster_cols = F, scale = "row", annotation_col = rbind(samplesheet_WT_ips[,c("cell"), drop=F], samplesheet_LacZ_NES[,c("cell"), drop=F]), show_colnames = T, gaps_col = 3, main = "WT iPSC + LacZ NES (scale: row)")
+
+pheatmap(log2(te_counts_norm[L1s,c(rownames(samplesheet_WT_ips), rownames(samplesheet_LacZ_NES))] + 0.5), cluster_rows = F, cluster_cols = F, annotation_col = rbind(samplesheet_WT_ips[,c("cell"), drop=F], samplesheet_LacZ_NES[,c("cell"), drop=F]), show_colnames = T, gaps_col = 3, main = "WT iPSC + LacZ NES")
+
+pheatmap(log2(te_counts_norm[L1s,rownames(samplesheet_WT_ips)] + 0.5), cluster_rows = F, cluster_cols = F, annotation_col = samplesheet_WT_ips[,c("cell"), drop=F], show_colnames = T, gaps_col = 3, main = "WT iPSC")
+pheatmap(log2(te_counts_norm[L1s,rownames(samplesheet_ips)] + 0.5), cluster_rows = F, cluster_cols = F, annotation_col = samplesheet_ips[,c("cell", "experiment", "guide")], show_colnames = T, gaps_col = 9, main = "CRISPRi iPSC")
+pheatmap(log2(te_counts_norm[L1s,rownames(samplesheet_ips_crispri_hips6)] + 0.5), cluster_rows = F, cluster_cols = F, annotation_col = samplesheet_ips_crispri_hips6[,c("cell", "experiment", "guide")], show_colnames = T, gaps_col = 6, main = "CRISPRi iPSC")
+pheatmap(log2(te_counts_norm[L1s,rownames(samplesheet_ips_crispri_hips6_example_samples_exp1)] + 0.5), cluster_rows = F, cluster_cols = F, annotation_col = samplesheet_ips_crispri_hips6_example_samples_exp1[,c("cell", "experiment", "guide")], show_colnames = T, gaps_col = 3,  main = "CRISPRi iPSC")
+pheatmap(log2(te_counts_norm[L1s,rownames(samplesheet_ips_crispri_hips6_example_samples_exp2)] + 0.5), cluster_rows = F, cluster_cols = F, annotation_col = samplesheet_ips_crispri_hips6_example_samples_exp2[,c("cell", "experiment", "guide")], show_colnames = T, gaps_col = 3,  main = "CRISPRi iPSC")
+pheatmap(log2(te_counts_norm[L1s,rownames(samplesheet_ips_crispri_hips48)] + 0.5), cluster_rows = F, cluster_cols = F, annotation_col = samplesheet_ips_crispri_hips48[,c("cell", "experiment", "guide")], show_colnames = T, gaps_col = 3, main = "CRISPRi iPSC")
+pheatmap(log2(te_counts_norm[L1s,rownames(samplesheet_NES)] + 0.5), cluster_rows = F, cluster_cols = F, annotation_col = samplesheet_NES[,c("cell", "experiment", "guide")], show_colnames = T, gaps_col = 9, main = "CRISPRa NES")
+pheatmap(log2(te_counts_norm[L1s,rownames(samplesheet_org_CRISPRi)] + 0.5), cluster_rows = F, cluster_cols = F, annotation_col = samplesheet_org_CRISPRi[,c("cell", "experiment", "guide")], show_colnames = T, gaps_col = 12, main = "CRISPRi organoids")
+pheatmap(log2(te_counts_norm[L1s,rownames(samplesheet_org_CRISPRa)] + 0.5), cluster_rows = F, cluster_cols = F, annotation_col = samplesheet_org_CRISPRa[,c("cell", "experiment", "guide")], show_colnames = T, gaps_col = 6, main = "CRISPRa organoids")
+dev.off()
+```
+

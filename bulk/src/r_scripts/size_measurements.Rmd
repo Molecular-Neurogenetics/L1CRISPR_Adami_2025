@@ -1,0 +1,47 @@
+---
+title: "Size measurements for L1-CRISPRi organoids"
+output: html_notebook
+---
+
+# Organoid size measurement between L1-CRISPRi and Control day 15 organoids 
+
+## Read data
+
+```{r}
+library(openxlsx)
+library(ggpubr)
+library(tidyverse)
+library(ggplot2)
+
+size_hips6 <- read.xlsx("/Volumes/MyPassport/CRISPRi_L1s/bulk/size_measurements/organoids_measurements_L1_CRISPRi_hiPS6_batch1_batch2_table.xlsx")
+size_hips48 <- read.xlsx("/Volumes/MyPassport/CRISPRi_L1s/bulk/size_measurements/organoids_measurements_L1_CRISPRi_hiPS48.xlsx")
+colnames(size_hips6) <- c("cellline", "day", "area_um2", "batch")
+colnames(size_hips48) <- c("cellline", "day", "area_um2")
+size_hips48$batch <- "1"
+size_hips6$cell <- "hiPS6"
+size_hips48$cell <- "hiPS48"
+size <- rbind(size_hips6, size_hips48)
+
+size$condition <- ifelse(grepl("LacZ", size$cellline), "LacZ", 
+                         ifelse(grepl("LV3824", size$cellline), "LV3824", 
+                                ifelse(grepl("LV3822", size$cellline), "LV3822", "Other?")))
+
+# Guide RNA 1
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/size_measurements_LV3824.pdf", width = 10, height = 3.5)
+size %>% 
+  filter(condition %in% c("LacZ", "LV3824")) %>% 
+  ggplot(aes(x=factor(day), y=area_um2, color=condition)) + geom_smooth(aes(group = condition)) + geom_point(size=0.3, position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.5), alpha=0.7) + 
+  stat_compare_means(label = "p.format", method = "t.test") +  facet_wrap(cell~batch, scales = "free_y") + theme_bw() + labs(x = "Day", y = "Area (um2)")
+# dev.off()
+
+# Guide RNA 2
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/size_measurements_LV3822.pdf", width = 5, height = 3.5)
+size %>% 
+  filter(cell == "hiPS6" & batch == 2 & condition %in% c("LacZ", "LV3822")) %>% 
+  ggplot(aes(x=factor(day), y=area_um2, color=condition)) + geom_smooth(aes(group = condition)) + geom_point(size=0.3, position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.5), alpha=0.7) + 
+  stat_compare_means(label = "p.format", method = "t.test") +  facet_wrap(cell~batch, scales = "free_y") + theme_bw() + labs(x = "Day", y = "Area (um2)")
+# dev.off()
+
+```
+
+

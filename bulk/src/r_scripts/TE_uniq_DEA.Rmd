@@ -1,0 +1,726 @@
+---
+title: "CRISPR L1s differential expression analysis of TEs"
+output: html_notebook
+---
+
+Here we perform differential expression analysis (DEA) of all TEs using a unique mapping approach for our CRISPR experiments targeting young L1 elements.
+
+The experimental design is CRISPR inhibition on iPSC where L1s are usually highly expressed, and CRISPR activation on neural progenitor cells.
+The two experiments were sequenced in two sequencing runs each (three sequencing runs total). 
+
+Before we start, I load libraries and define some helper functions to visualize the effect as a mean plot (credits to Per Brattås! who wrote the original code for it)
+```{r class.source = 'fold-hide'}
+library(data.table)
+library(ggplot2)
+library(ggpubr)
+library(stringr)
+library(DESeq2)
+## getSignName ##
+# Get significantly different gene names. 
+# Taken from source code of the package deseqAbstraction which is no longer available on github.
+# Credits to Per L. Brattås
+# Parameters:
+# x = results object from deseq
+# p = padj threshold for significance
+# l = log2FC threshold for significance
+getSignName <- function(x,p,l=0) {
+  up <- x[!is.na(x$padj) & x$padj < p & x$log2FoldChange > l,]
+  down <- x[!is.na(x$padj) & x$padj < p & x$log2FoldChange < -l,]
+  return(list(up=rownames(up),down=rownames(down)))
+}
+## getAverage ##
+# Get average expression (normalized by median of ratios) of each of the conditions in a deseq object.
+# Taken from source code of the package deseqAbstraction which is no longer available on github.
+# Credits to Per L. Brattås
+# Parameters:
+# dds = deseq object
+getAverage <- function(dds) {
+  baseMeanPerLvl <- sapply( levels(dds$condition), function(lvl) rowMeans( counts(dds,normalized=TRUE)[,dds$condition == lvl] ) )
+  baseSDPerLvl <- sapply( levels(dds$condition), function(lvl) apply( counts(dds,normalized=TRUE)[,dds$condition == lvl],1,sd ) )
+  colnames(baseSDPerLvl) <- paste("st.dev:",colnames(baseSDPerLvl),sep="")
+  return(list(Mean=baseMeanPerLvl,SD=baseSDPerLvl))
+}
+
+meanPlot_cus <- function(exp,test,c1 = "condition 1",c2 = "condition 2",p=.05,l=0,id=F, ttl="", 
+                         repel=TRUE, col1="tomato", col2="darkturquoise", col3="grey", highlights=NA){
+  sign <- getSignName(x = test,p = p,l = l)
+  u <- sign$up
+  d <- sign$down
+  
+  #color up and down sign..
+  colVec <- ifelse(test = (rownames(exp) %in% u),
+                   yes = col1,
+                   no = ifelse(test = (rownames(exp) %in% d),
+                               yes = col2, no =col3))
+  colVec[is.na(colVec)] <- "steelblue" ## if NA make sure it's not counted as <p
+  #size of points
+  cexVec <- ifelse(test = (rownames(exp) %in% u),
+                   yes = 0.35,
+                   no = ifelse(test = (rownames(exp) %in% d),
+                               yes = 0.35, no = 0.3))
+  
+  exp_log <- as.data.frame(log2(exp[,c(c1, c2)] + 0.5))
+  exp_log$Name <- rownames(exp_log)
+  
+  exp_log$reg <- factor(ifelse(exp_log$Name %in% u, paste('upregulated in ', c1, ' (', length(u), ')', sep =''),
+                               ifelse(exp_log$Name %in% d, paste('downregulated in ', c1,' (', length(d), ')', sep =''), paste('not significant', ' (', (nrow(test) - length(u) - length(d)), ')', sep=''))))
+  
+  library(ggrepel)
+  if(repel == TRUE){
+    plt <- ggplot(exp_log, aes(x=get(c2), y=get(c1), label=Name, color=reg)) + geom_point(aes(size=cexVec), alpha=0.7)+ scale_color_manual(values=c(col2, col3, col1))+ scale_size_continuous(range=c(1,2), guide="none")+ geom_text_repel(data = subset(exp_log, Name %in% u | Name %in% d),direction    = "y", nudge_y = 0.4, nudge_x = -0.5)
+  }
+  else{
+    plt <- ggplot(exp_log, aes(x=get(c2), y=get(c1), color=reg)) + geom_point(aes(size=cexVec), alpha=0.7)+ scale_color_manual(values=c(col2, col3, col1))+ scale_size_continuous(range=c(1,2), guide="none")
+  }
+  plt <- plt + labs(x=paste("log2(mean ",c2,")",sep=""), 
+                    y=paste("log2(mean ",c1,")",sep=""),
+                    title=paste(ttl, paste(c1," vs. ",c2,sep=""), sep = ': '),
+                    subtitle=paste("p-adj < ",p,", log2(fc) > ",l,sep=""))+ theme_bw() +
+    theme( plot.title = element_text( size=14, face="bold"), text = element_text(size=15), panel.grid.minor = element_blank(), panel.grid.major = element_blank(), legend.title=element_blank()) 
+  
+  
+  if(id==T) {
+    
+    identify(log2(exp[,1]),log2(exp[,2]),labels = rownames(exp))
+    
+  }
+  
+  if(!is.na(highlights)){
+    plt <- plt + geom_point(data=exp_log[highlights,], aes(x=get(c2), y=get(c1)), colour="springgreen3", size=5, shape=1, stroke=2)
+  }
+  return(plt)
+  
+}
+```
+
+Here we load the metadata of the samples (and split them by experiment and guide), and the TE count matrices (`te_counts` with all counts).
+```{r}
+samplesheet <- fread("/Volumes/MyPassport/CRISPRi_L1s/samplesheet_L1crispr.tab", data.table = F, header = T)
+samplesheet <- samplesheet[which(!samplesheet$samples %in% c("AA11_Sai2_lv3775_B_CRISPRa_S11", "AA_Sai2_L1_CRISPRa_LV3776_c_S29")),]
+samplesheet_list <- split(samplesheet, f = list(samplesheet$cell, samplesheet$experiment, samplesheet$guide, samplesheet$seqnum))
+samplesheet_list <- samplesheet_list[sapply(samplesheet_list,nrow)>0] 
+
+samplesheet_comparisons <- list(
+  "hiPS6_crispri_g1" = rbind(samplesheet_list$hiPS6.crispri.g1.CTG_JGJSeq156_159_160truseq, 
+                             samplesheet_list$hiPS6.crispri.LacZ.CTG_JGJSeq156_159_160truseq),
+  # "hiPS6_crispri_g2" = rbind(samplesheet_list$hiPS6.crispri.g2.CTG_JGJSeq205_207_208_214_truseq_2023_021,
+  #                            samplesheet_list$hiPS6.crispri.LacZ.CTG_JGJSeq205_207_208_214_truseq_2023_021),
+  "hiPS6_crispri_g3" = rbind(samplesheet_list$hiPS6.crispri.g3.CTG_JGJSeq205_207_208_214_truseq_2023_021,
+                             samplesheet_list$hiPS6.crispri.LacZ.CTG_JGJSeq205_207_208_214_truseq_2023_021),
+  "hiPS48_crispri_g3" = rbind(samplesheet_list$hiPS48.crispri.g3.testdata_ctg_2023_50,
+                              samplesheet_list$hiPS48.crispri.LacZ.testdata_ctg_2023_50),
+  "NES_crispra_g1" = rbind(samplesheet_list$NES.crispra.g1.CTG_JGJSeq156_159_160truseq,
+                           samplesheet_list$NES.crispra.NTC.CTG_JGJSeq156_159_160truseq),
+  # "NES_crispra_g2" = rbind(samplesheet_list$NES.crispra.g2.CTG_JGJSeq233_237_250_257_2023_145,
+  #                          samplesheet_list$NES.crispra.LacZ.CTG_JGJSeq233_237_250_257_2023_145),
+  "NES_crispra_g3" = rbind(samplesheet_list$NES.crispra.g3.CTG_JGJSeq233_237_250_257_2023_145,
+                           samplesheet_list$NES.crispra.LacZ.CTG_JGJSeq233_237_250_257_2023_145),
+  "hiPS6_org_crispri_g1" = rbind(samplesheet_list$hiPS6_org.crispri.g1.CTG_2024_017_Seq296_297_305_315_bulkRNASeq,
+                                 samplesheet_list$hiPS6_org.crispri.LacZ.CTG_2024_017_Seq296_297_305_315_bulkRNASeq),
+  # "hiPS6_org_crispri_g2" = rbind(samplesheet_list$hiPS6_org.crispri.g2.CTG_2024_017_Seq296_297_305_315_bulkRNASeq,
+  #                                samplesheet_list$hiPS6_org.crispri.LacZ.CTG_2024_017_Seq296_297_305_315_bulkRNASeq),
+  "hiPS6_org_crispri_g3" = rbind(samplesheet_list$hiPS6_org.crispri.g3.CTG_JGJSeq233_237_250_257_2023_145,
+                                  samplesheet_list$hiPS6_org.crispri.LacZ.CTG_JGJSeq233_237_250_257_2023_145),
+  "hiPS6_org_crispri_g3_batch2" = rbind(samplesheet_list$hiPS6_org.crispri.g3.CTG_2024_017_Seq296_297_305_315_bulkRNASeq,
+                                 samplesheet_list$hiPS6_org.crispri.LacZ.CTG_2024_017_Seq296_297_305_315_bulkRNASeq),
+  "hiPS48_org_crispri_g3" = rbind(samplesheet_list$hiPS48_org.crispri.g3.CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX,
+                                  samplesheet_list$hiPS48_org.crispri.LacZ.CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX),
+  "hiPS6_org_crispra_g1" = rbind(samplesheet_list$hiPS6_org.crispra.g1.CTG_2024_017_Seq296_297_305_315_bulkRNASeq,
+                                 samplesheet_list$hiPS6_org.crispra.LacZ.CTG_2024_017_Seq296_297_305_315_bulkRNASeq),
+  "hiPS6_org_crispra_g2" = rbind(samplesheet_list$hiPS6_org.crispra.g2.CTG_2024_017_Seq296_297_305_315_bulkRNASeq,
+                                 samplesheet_list$hiPS6_org.crispra.LacZ.CTG_2024_017_Seq296_297_305_315_bulkRNASeq),
+  "hiPS6_org_crispra_g3" = rbind(samplesheet_list$hiPS6_org.crispra.g3.CTG_JGJSeq233_237_250_257_2023_145,
+                                  samplesheet_list$hiPS6_org.crispra.LacZ.CTG_JGJSeq233_237_250_257_2023_145),
+  "hiPS6_org_crispra_g3_batch2" = rbind(samplesheet_list$hiPS6_org.crispra.g3.CTG_2024_017_Seq296_297_305_315_bulkRNASeq,
+                                 samplesheet_list$hiPS6_org.crispra.LacZ.CTG_2024_017_Seq296_297_305_315_bulkRNASeq)
+)
+
+path <- "/Volumes/MyPassport/CRISPRi_L1s/TEcounts/unique/"
+samples <- samplesheet$samples
+
+for(i in 1:length(samples)){
+  sample <- samples[i]
+  if(i == 1){
+    te_counts <- fread(paste(path, sample, "_TE_count_matrix_2.csv", sep=""), data.table = F)    
+    colnames(te_counts)[ncol(te_counts)] <- sample
+    rownames(te_counts) <- te_counts$Geneid
+    row_order <- rownames(te_counts)
+  }else{
+    tmp <- fread(paste(path, sample, "_TE_count_matrix_2.csv", sep=""), data.table = F)
+    colnames(tmp)[ncol(tmp)] <- sample
+    rownames(tmp) <- tmp$Geneid
+    te_counts <- cbind(te_counts[row_order,], tmp[row_order,sample,drop=F])
+  }
+}
+
+```
+
+As there are quite a bit of comparisons to be made (one per experiment, per guide), I looped this.
+```{r}
+te_dds_list <- list()
+te_res_list <- list()
+te_res_list_df <- list()
+te_exp_list <- list()
+rownames(te_counts) <- te_counts$Geneid
+
+for(i in names(samplesheet_comparisons)){
+  rownames(samplesheet_comparisons[[i]]) <- samplesheet_comparisons[[i]]$samples
+  print(i)
+  print(c("Batch: ", unique(samplesheet_comparisons[[i]]$seqnum)))
+  conditions <- unique(samplesheet_comparisons[[i]]$condition)
+  print(c("Conditions: ", conditions))
+
+  effect <- conditions[which(conditions != "Control")]
+  test <- paste("condition_", effect ,"_vs_Control", sep = "")
+  print(c("Test: ", test))
+
+  te_dds_list[[i]] <- DESeqDataSetFromMatrix(te_counts[,rownames(samplesheet_comparisons[[i]])], samplesheet_comparisons[[i]], design =  ~ condition)
+  te_dds_list[[i]]$condition <- relevel(te_dds_list[[i]]$condition, "Control")
+  te_dds_list[[i]] <- DESeq(te_dds_list[[i]])
+  te_res_list[[i]] <- lfcShrink(te_dds_list[[i]], test)
+  te_exp_list[[i]] <- getAverage(te_dds_list[[i]])
+  te_res_list_df[[i]] <- as.data.frame(te_res_list[[i]])
+}
+
+```
+
+Plots with ALL transposons are hardly informative for this particular experiment (and very heavy files), so I'll just plot L1PAs (1-8) on mean plots and volcano plots.
+
+Again, quite a bit of comparisons so I'll loop it.
+```{r}
+library(EnhancedVolcano)
+TE_annotation <- fread("/Volumes/MyPassport/annotations/human/repeatmasker/hg38_rmsk_TEtranscripts_classification.tab", data.table = F, header = F)
+colnames(TE_annotation) <- c("TE_id", "TE_subfamily", "TE_family", "TE_class")
+L1PA_annotation <- TE_annotation[which(TE_annotation$TE_subfamily %in% c("L1HS","L1PA2","L1PA3","L1PA4","L1PA5","L1PA6","L1PA7","L1PA8","L1PA8A")),]
+rownames(L1PA_annotation) <- L1PA_annotation$TE_id
+FL_L1PA_annotation <- L1PA_annotation[te_counts[which(te_counts$Geneid %in% L1PA_annotation$TE_id & te_counts$Length >= 6000), "Geneid"],]
+
+for (i in names(te_res_list_df)) te_res_list_df[[i]]$TE_id <- rownames(te_res_list_df[[i]])
+
+# Now, we visualize things ----
+volcano_plots_list <- list()
+mean_plots_list <- list()
+ma_plots_list <- list()
+for(i in names(te_res_list)){
+  tmp <- EnhancedVolcano(te_res_list[[i]][FL_L1PA_annotation$TE_id, ], 
+                                             drawConnectors = T, 
+                                             lab = NA, 
+                                             x = 'log2FoldChange',
+                                             y = 'padj',
+                                             pCutoff = 0.05,
+                                             FCcutoff = 1)
+  tmp$data$Sig <- ifelse(tmp$data$log2FoldChange > 1 & tmp$data$Sig == "FC_P", "Upregulated", 
+                                             ifelse(tmp$data$log2FoldChange < -1 & tmp$data$Sig == "FC_P", "Downregulated", "Not significant"))
+  tmp$data$Sig <- paste(tmp$data$Sig, table(tmp$data$Sig)[tmp$data$Sig], sep = ": ")
+  
+  not_sig_lab <- unique(tmp$data$Sig)[startsWith(unique(tmp$data$Sig), "Not significant")]
+  up_sig_lab <- unique(tmp$data$Sig)[startsWith(unique(tmp$data$Sig), "Upregulated")]
+  down_sig_lab <- unique(tmp$data$Sig)[startsWith(unique(tmp$data$Sig), "Downregulated")]
+  
+  point_colours <- c("grey", "tomato", "darkturquoise")
+  point_sizes <- c(1,2,1)
+  
+  if(grepl("crispra", i)){# CRISPRa
+    names(point_colours) <- c(not_sig_lab, up_sig_lab, down_sig_lab)
+    names(point_sizes) <- c(not_sig_lab, up_sig_lab, down_sig_lab)
+  }else{ 
+    names(point_colours) <- c(not_sig_lab, down_sig_lab, up_sig_lab)
+    names(point_sizes) <- c(not_sig_lab, down_sig_lab, up_sig_lab)
+  }
+  
+  
+  title <- str_replace_all(i, pattern = "_", replacement = " ")
+  
+  tmp <- tmp$data
+  tmp$TE_subfamily <- sapply(str_split(rownames(tmp), "_dup"), `[[`, 1)
+  volcano_plots_list[[i]] <- ggplot(tmp, aes(x=log2FoldChange, y=-log10(padj), colour=Sig, size=Sig)) + geom_point(alpha=0.7) + 
+    geom_vline(xintercept = 1, linetype="dotted") + geom_vline(xintercept = -1, linetype="dotted") + 
+    geom_hline(yintercept = -log10(0.05), linetype="dotted") + labs(colour="") + 
+    scale_color_manual(values = point_colours)  + 
+    scale_size_manual(values = point_sizes, guide="none") +
+    theme_bw() +
+    theme(text = element_text(size=15), panel.grid.minor = element_blank(), panel.grid.major = element_blank()) +
+    ggtitle(title)
+  
+  effect <- unique(samplesheet_comparisons[[i]][which(samplesheet_comparisons[[i]]$condition != "Control"),"condition"])
+  mean_plots_list[[i]] <- meanPlot_cus(exp = te_exp_list[[i]]$Mean[FL_L1PA_annotation$TE_id, ], 
+                                       test = te_res_list[[i]][FL_L1PA_annotation$TE_id, ], 
+                                       c1 = effect, c2="Control", p = 0.05, l=1, ttl = title, repel = F)
+  
+  # tmp <- merge(tmp, TE_bed, by.x="row.names", by.y="TE_id")
+  # tmp$coords <- add_windows_coords(tmp)$coords
+  # targets <- openxlsx::read.xlsx("/Volumes/MyPassport/CRISPRi_L1s/target_guides/crispri/targets_L1_CRISPRi.xlsx") # hips48 g3 targets and NES CRISPRa targets are the same as hips6 guides.
+  # targets_plot <- bedr.sort.region(tmp$coords)[which(bedr.sort.region(tmp$coords) %in.region% bedr.sort.region(targets$coords))]
+  # tmp$target <- ifelse(tmp$coords %in% targets_plot, TRUE, FALSE)
+  ma_plots_list[[i]] <- ggplot(tmp, aes(x=log2(baseMean + 0.5), y=log2FoldChange, colour=Sig, size=Sig)) + 
+    geom_point(alpha=0.7) + 
+    theme_bw() + 
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
+    scale_color_manual(values = point_colours) +
+    scale_size_manual(values = point_sizes, guide="none") + ggtitle(title) # + geom_point(data=tmp[which(tmp$target),], aes(x=log2(baseMean + 0.5), y=log2FoldChange), colour="springgreen3", size=2, shape=1, stroke=2)
+}
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/volcano_plots_L1s.pdf", height = 4, width = 7)
+volcano_plots_list
+dev.off()
+
+```
+
+
+## Saving L1 DEA to an excel file (DESeq2 res) and BED file of DE L1s
+```{r}
+L1_dysreg_hiPS6_crispri_g1 <- te_res_list_df$hiPS6_crispri_g1[which(te_res_list_df$hiPS6_crispri_g1$padj < 0.05 & te_res_list_df$hiPS6_crispri_g1$log2FoldChange < -1 & te_res_list_df$hiPS6_crispri_g1$TE_id %in% FL_L1PA_annotation$TE_id),]
+# L1_dysreg_hiPS6_crispri_g2 <- te_res_list_df$hiPS6_crispri_g2[which(te_res_list_df$hiPS6_crispri_g2$padj < 0.05 & te_res_list_df$hiPS6_crispri_g2$log2FoldChange < -1 & te_res_list_df$hiPS6_crispri_g2$TE_id %in% FL_L1PA_annotation$TE_id),]
+L1_dysreg_hiPS6_crispri_g3 <- te_res_list_df$hiPS6_crispri_g3[which(te_res_list_df$hiPS6_crispri_g3$padj < 0.05 & te_res_list_df$hiPS6_crispri_g3$log2FoldChange < -1 & te_res_list_df$hiPS6_crispri_g3$TE_id %in% FL_L1PA_annotation$TE_id),]
+L1_dysreg_hiPS48_crispri_g3 <- te_res_list_df$hiPS48_crispri_g3[which(te_res_list_df$hiPS48_crispri_g3$padj < 0.05 & te_res_list_df$hiPS48_crispri_g3$log2FoldChange < -1 & te_res_list_df$hiPS48_crispri_g3$TE_id %in% FL_L1PA_annotation$TE_id),]
+L1_dysreg_NES_crispra_g1 <- te_res_list_df$NES_crispra_g1[which(te_res_list_df$NES_crispra_g1$padj < 0.05 & te_res_list_df$NES_crispra_g1$log2FoldChange > 1 & te_res_list_df$NES_crispra_g1$TE_id %in% FL_L1PA_annotation$TE_id),]
+# L1_dysreg_NES_crispra_g2 <- te_res_list_df$NES_crispra_g2[which(te_res_list_df$NES_crispra_g2$padj < 0.05 & te_res_list_df$NES_crispra_g2$log2FoldChange > 1 & te_res_list_df$NES_crispra_g2$TE_id %in% FL_L1PA_annotation$TE_id),]
+L1_dysreg_NES_crispra_g3 <- te_res_list_df$NES_crispra_g3[which(te_res_list_df$NES_crispra_g3$padj < 0.05 & te_res_list_df$NES_crispra_g3$log2FoldChange > 1 & te_res_list_df$NES_crispra_g3$TE_id %in% FL_L1PA_annotation$TE_id),]
+L1_dysreg_hiPS6_org_crispri_g1 <- te_res_list_df$hiPS6_org_crispri_g1[which(te_res_list_df$hiPS6_org_crispri_g1$padj < 0.05 & te_res_list_df$hiPS6_org_crispri_g1$log2FoldChange < -1 & te_res_list_df$hiPS6_org_crispri_g1$TE_id %in% FL_L1PA_annotation$TE_id),]
+# L1_dysreg_hiPS6_org_crispri_g2 <- te_res_list_df$hiPS6_org_crispri_g2[which(te_res_list_df$hiPS6_org_crispri_g2$padj < 0.05 & te_res_list_df$hiPS6_org_crispri_g2$log2FoldChange < -1 & te_res_list_df$hiPS6_org_crispri_g2$TE_id %in% FL_L1PA_annotation$TE_id),]
+L1_dysreg_hiPS6_org_crispri_g3 <- te_res_list_df$hiPS6_org_crispri_g3[which(te_res_list_df$hiPS6_org_crispri_g3$padj < 0.05 & te_res_list_df$hiPS6_org_crispri_g3$log2FoldChange < -1 & te_res_list_df$hiPS6_org_crispri_g3$TE_id %in% FL_L1PA_annotation$TE_id),]
+L1_dysreg_hiPS6_org_crispri_g3_batch2 <- te_res_list_df$hiPS6_org_crispri_g3_batch2[which(te_res_list_df$hiPS6_org_crispri_g3_batch2$padj < 0.05 & te_res_list_df$hiPS6_org_crispri_g3_batch2$log2FoldChange < -1 & te_res_list_df$hiPS6_org_crispri_g3_batch2$TE_id %in% FL_L1PA_annotation$TE_id),]
+L1_dysreg_hiPS48_org_crispri_g3 <- te_res_list_df$hiPS48_org_crispri_g3[which(te_res_list_df$hiPS48_org_crispri_g3$padj < 0.05 & te_res_list_df$hiPS48_org_crispri_g3$log2FoldChange < -1 & te_res_list_df$hiPS48_org_crispri_g3$TE_id %in% FL_L1PA_annotation$TE_id),]
+L1_dysreg_hiPS6_org_crispra_g1 <- te_res_list_df$hiPS6_org_crispra_g1[which(te_res_list_df$hiPS6_org_crispra_g1$padj < 0.05 & te_res_list_df$hiPS6_org_crispra_g1$log2FoldChange > 1 & te_res_list_df$hiPS6_org_crispra_g1$TE_id %in% FL_L1PA_annotation$TE_id),]
+# L1_dysreg_hiPS6_org_crispra_g2 <- te_res_list_df$hiPS6_org_crispra_g2[which(te_res_list_df$hiPS6_org_crispra_g2$padj < 0.05 & te_res_list_df$hiPS6_org_crispra_g2$log2FoldChange > 1 & te_res_list_df$hiPS6_org_crispra_g2$TE_id %in% FL_L1PA_annotation$TE_id),]
+L1_dysreg_hiPS6_org_crispra_g3 <- te_res_list_df$hiPS6_org_crispra_g3[which(te_res_list_df$hiPS6_org_crispra_g3$padj < 0.05 & te_res_list_df$hiPS6_org_crispra_g3$log2FoldChange > 1 & te_res_list_df$hiPS6_org_crispra_g3$TE_id %in% FL_L1PA_annotation$TE_id),]
+L1_dysreg_hiPS6_org_crispra_g3_batch2 <- te_res_list_df$hiPS6_org_crispra_g3_batch2[which(te_res_list_df$hiPS6_org_crispra_g3_batch2$padj < 0.05 & te_res_list_df$hiPS6_org_crispra_g3_batch2$log2FoldChange > 1 & te_res_list_df$hiPS6_org_crispra_g3_batch2$TE_id %in% FL_L1PA_annotation$TE_id),]
+
+openxlsx::write.xlsx(list("hiPS6_crispri_g1" = L1_dysreg_hiPS6_crispri_g1,
+                          # "hiPS6_crispri_g2" = L1_dysreg_hiPS6_crispri_g2,
+                          "hiPS6_crispri_g3" = L1_dysreg_hiPS6_crispri_g3,
+                          "hiPS48_crispri_g3" = L1_dysreg_hiPS48_crispri_g3,
+                          "NES_crispra_g1" = L1_dysreg_NES_crispra_g1,
+                          # "NES_crispra_g2" = L1_dysreg_NES_crispra_g2,
+                          "NES_crispra_g3" = L1_dysreg_NES_crispra_g3,
+                          "hiPS6_org_crispri_g1" = L1_dysreg_hiPS6_org_crispri_g1,
+                          # "hiPS6_org_crispri_g2" = L1_dysreg_hiPS6_org_crispri_g2,
+                          "hiPS6_org_crispri_g3" = L1_dysreg_hiPS6_org_crispri_g3,
+                          "hiPS6_org_crispri_g3_batch2" = L1_dysreg_hiPS6_org_crispri_g3_batch2,
+                          "hiPS48_org_crispri_g3" = L1_dysreg_hiPS48_org_crispri_g3,
+                          "hiPS6_org_crispra_g1" = L1_dysreg_hiPS6_org_crispra_g1,
+                          # "hiPS6_org_crispra_g2" = L1_dysreg_hiPS6_org_crispra_g2,
+                          "hiPS6_org_crispra_g3" = L1_dysreg_hiPS6_org_crispra_g3,
+                          "hiPS6_org_crispra_g3_batch2" = L1_dysreg_hiPS6_org_crispra_g3_batch2),
+                     file = "/Volumes/MyPassport/CRISPRi_L1s/results/tables/FL_L1PAs_DEA.xlsx")
+
+te_counts$dot <- "."
+L1_dysreg_hiPS6_crispri_g1 <- te_counts[L1_dysreg_hiPS6_crispri_g1$TE_id, c("Chr", "Start", "End", "Geneid", "dot", "Strand")]
+# L1_dysreg_hiPS6_crispri_g2 <- te_counts[L1_dysreg_hiPS6_crispri_g2$TE_id, c("Chr", "Start", "End", "Geneid", "dot", "Strand")]
+L1_dysreg_hiPS6_crispri_g3 <- te_counts[L1_dysreg_hiPS6_crispri_g3$TE_id, c("Chr", "Start", "End", "Geneid", "dot", "Strand")]
+L1_dysreg_hiPS48_crispri_g3 <- te_counts[L1_dysreg_hiPS48_crispri_g3$TE_id, c("Chr", "Start", "End", "Geneid", "dot", "Strand")]
+L1_dysreg_NES_crispra_g1 <- te_counts[L1_dysreg_NES_crispra_g1$TE_id, c("Chr", "Start", "End", "Geneid", "dot", "Strand")]
+# L1_dysreg_NES_crispra_g2 <- te_counts[L1_dysreg_NES_crispra_g2$TE_id, c("Chr", "Start", "End", "Geneid", "dot", "Strand")]
+L1_dysreg_NES_crispra_g3 <- te_counts[L1_dysreg_NES_crispra_g3$TE_id, c("Chr", "Start", "End", "Geneid", "dot", "Strand")]
+L1_dysreg_hiPS6_org_crispri_g1 <- te_counts[L1_dysreg_hiPS6_org_crispri_g1$TE_id, c("Chr", "Start", "End", "Geneid", "dot", "Strand")]
+# L1_dysreg_hiPS6_org_crispri_g2 <- te_counts[L1_dysreg_hiPS6_org_crispri_g2$TE_id, c("Chr", "Start", "End", "Geneid", "dot", "Strand")]
+L1_dysreg_hiPS6_org_crispri_g3 <- te_counts[L1_dysreg_hiPS6_org_crispri_g3$TE_id, c("Chr", "Start", "End", "Geneid", "dot", "Strand")]
+L1_dysreg_hiPS6_org_crispri_g3_batch2 <- te_counts[L1_dysreg_hiPS6_org_crispri_g3_batch2$TE_id, c("Chr", "Start", "End", "Geneid", "dot", "Strand")]
+L1_dysreg_hiPS48_org_crispri_g3 <- te_counts[L1_dysreg_hiPS48_org_crispri_g3$TE_id, c("Chr", "Start", "End", "Geneid", "dot", "Strand")]
+L1_dysreg_hiPS6_org_crispra_g1 <- te_counts[L1_dysreg_hiPS6_org_crispra_g1$TE_id, c("Chr", "Start", "End", "Geneid", "dot", "Strand")]
+# L1_dysreg_hiPS6_org_crispra_g2 <- te_counts[L1_dysreg_hiPS6_org_crispra_g2$TE_id, c("Chr", "Start", "End", "Geneid", "dot", "Strand")]
+L1_dysreg_hiPS6_org_crispra_g3 <- te_counts[L1_dysreg_hiPS6_org_crispra_g3$TE_id, c("Chr", "Start", "End", "Geneid", "dot", "Strand")]
+L1_dysreg_hiPS6_org_crispra_g3_batch2 <- te_counts[L1_dysreg_hiPS6_org_crispra_g3_batch2$TE_id, c("Chr", "Start", "End", "Geneid", "dot", "Strand")]
+
+L1_dysreg_hiPS6_crispri_g1$type <- "hiPS6_crispri_g1"
+# L1_dysreg_hiPS6_crispri_g2$type <- "hiPS6_crispri_g2"
+L1_dysreg_hiPS6_crispri_g3$type <- "hiPS6_crispri_g3"
+L1_dysreg_hiPS48_crispri_g3$type <- "hiPS48_crispri_g3"
+L1_dysreg_NES_crispra_g1$type <- "NES_crispra_g1"
+# L1_dysreg_NES_crispra_g2$type <- "NES_crispra_g2"
+L1_dysreg_NES_crispra_g3$type <- "NES_crispra_g3"
+L1_dysreg_hiPS6_org_crispri_g1$type <- "hiPS6_org_crispri_g1"
+# L1_dysreg_hiPS6_org_crispri_g2$type <- "hiPS6_org_crispri_g2"
+L1_dysreg_hiPS6_org_crispri_g3$type <- "hiPS6_org_crispri_g3"
+L1_dysreg_hiPS6_org_crispri_g3_batch2$type <- "hiPS6_org_crispri_g3_batch2"
+L1_dysreg_hiPS48_org_crispri_g3$type <- "hiPS48_org_crispri_g3"
+L1_dysreg_hiPS6_org_crispra_g1$type <- "hiPS6_org_crispra_g1"
+# L1_dysreg_hiPS6_org_crispra_g2$type <- "hiPS6_org_crispra_g2"
+L1_dysreg_hiPS6_org_crispra_g3$type <- "hiPS6_org_crispra_g3"
+# L1_dysreg_hiPS6_org_crispra_g3_batch2$type <- "hiPS6_org_crispra_g3_batch2"
+
+library(dplyr)
+L1_DEA_crispri_iPSC <- rbind(L1_dysreg_hiPS6_crispri_g1,
+                # L1_dysreg_hiPS6_crispri_g2,
+                L1_dysreg_hiPS6_crispri_g3,
+                L1_dysreg_hiPS48_crispri_g3)
+nrow(L1_DEA_crispri_iPSC)
+L1_DEA_crispri_iPSC %>% select("Geneid") %>% distinct() %>% nrow()
+L1_DEA_crispra_NES <- rbind(L1_dysreg_NES_crispra_g1,
+                # L1_dysreg_NES_crispra_g2,
+                L1_dysreg_NES_crispra_g3)
+nrow(L1_DEA_crispra_NES)
+L1_DEA_crispra_NES %>% select("Geneid") %>% distinct() %>% nrow()
+L1_DEA_crispri_org <- rbind(L1_dysreg_hiPS6_org_crispri_g1,
+                # L1_dysreg_hiPS6_org_crispri_g2,
+                L1_dysreg_hiPS6_org_crispri_g3,
+                L1_dysreg_hiPS6_org_crispri_g3_batch2,
+                L1_dysreg_hiPS48_org_crispri_g3)
+nrow(L1_DEA_crispri_org)
+L1_DEA_crispri_org %>% select("Geneid") %>% distinct() %>% nrow()
+L1_DEA_crispra_org <- rbind(L1_dysreg_hiPS6_org_crispra_g1,
+                # L1_dysreg_hiPS6_org_crispra_g2,
+                L1_dysreg_hiPS6_org_crispra_g3,
+                L1_dysreg_hiPS6_org_crispra_g3_batch2)
+nrow(L1_DEA_crispra_org)
+L1_DEA_crispra_org %>% select("Geneid") %>% distinct() %>% nrow()
+
+write.table(L1_DEA_crispri_iPSC, file = "/Volumes/MyPassport/CRISPRi_L1s/results/tables/targeted_FL_L1_DEA_crispri_iPSC.bed",  sep="\t", quote=F, col.names = F, row.names = F)
+write.table(L1_DEA_crispra_NES, file = "/Volumes/MyPassport/CRISPRi_L1s/results/tables/targeted_FL_L1_DEA_crispra_NES.bed",  sep="\t", quote=F, col.names = F, row.names = F)
+write.table(L1_DEA_crispri_org, file = "/Volumes/MyPassport/CRISPRi_L1s/results/tables/targeted_FL_L1_DEA_crispri_org.bed",  sep="\t", quote=F, col.names = F, row.names = F)
+write.table(L1_DEA_crispra_org, file = "/Volumes/MyPassport/CRISPRi_L1s/results/tables/targeted_FL_L1_DEA_crispra_org.bed",  sep="\t", quote=F, col.names = F, row.names = F)
+```
+
+## Differentially expressed L1 
+### Genic vs Intergenic
+```{r}
+library(stringr)
+library(ggplot2)
+targeted_FL_L1_DEA <- read.table("/Volumes/MyPassport/CRISPRi_L1s/results/tables/targeted_FL_L1_DEA_crispri_iPSC.bed")
+colnames(targeted_FL_L1_DEA) <- c("TE_chr", "TE_start", "TE_end", "TE_id", "dot", "TE_strand", "type")
+
+targeted_L1_protein_genes <- read.table("/Volumes/MyPassport/CRISPRi_L1s/results/tables/targeted_FL_L1_DEA_crispri_iPSC_intersect_protein_genes.bed")
+colnames(targeted_L1_protein_genes) <- c("gene_chr", "gene_start", "gene_end", "gene_name", "dot", "gene_strand", 
+                                         "TE_chr", "TE_start", "TE_end", "TE_id", "dot2", "TE_strand", "type", "overlap")
+
+targeted_FL_L1_DEA$genic <- ifelse(targeted_FL_L1_DEA$TE_id %in% targeted_L1_protein_genes$TE_id, "genic", "intergenic")
+targeted_FL_L1_DEA$TE_subfamily <- sapply(str_split(targeted_FL_L1_DEA$TE_id, "_"), `[[`, 1)
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/targeted_L1HS_L1PA8A_genic_FL_L1_DEA_crispri_iPSC.pdf", height = 5, width = 9)
+ggplot(targeted_FL_L1_DEA, aes(x=type, fill=genic)) + geom_histogram(stat="count") + theme_bw() + theme(text = element_text(size=15), panel.grid.minor = element_blank(), panel.grid.major = element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + facet_wrap(.~TE_subfamily, ncol = 7) + ggtitle("CRISPRi iPSC: Targeted FL L1HS-L1PA8A\nGenic / intergenic") + labs(x="")
+dev.off()
+```
+
+### Protein coding overlapping genes
+Orientation of L1s --> Sense vs Antisense
+```{r}
+targeted_L1_protein_genes$orientation <- ifelse(targeted_L1_protein_genes$gene_strand == targeted_L1_protein_genes$TE_strand, "sense", "antisense")
+targeted_L1_protein_genes$TE_subfamily <- sapply(str_split(targeted_L1_protein_genes$TE_id, "_"), `[[`, 1)
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/targeted_genic_L1HS_L1PA8A_orientation_FL_L1_DEA_crispri_iPSC.pdf", height = 5, width = 9)
+ggplot(targeted_L1_protein_genes, aes(x=type, fill=orientation)) + geom_histogram(stat="count") + theme_bw() + theme(text = element_text(size=15), panel.grid.minor = element_blank(), panel.grid.major = element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + facet_wrap(.~TE_subfamily, ncol = 7) + ggtitle("CRISPRi iPSC: Targeted FL L1HS-L1PA8A\noverlapping protein coding genes") + labs(x="")
+dev.off()
+```
+
+Exon vs Intron
+```{r}
+targeted_L1_protein_exons <- read.table("/Volumes/MyPassport/CRISPRi_L1s/results/tables/targeted_FL_L1_DEA_crispri_iPSC_intersect_protein_exons.bed")
+colnames(targeted_L1_protein_exons) <- c("exon_chr", "exon_start", "exon_end", "exon_name", "dot", "exon_strand", 
+                                         "TE_chr", "TE_start", "TE_end", "TE_id", "dot2", "TE_strand", "type", "overlap")
+
+targeted_FL_L1_DEA$exonic <- ifelse(targeted_FL_L1_DEA$TE_id %in% targeted_L1_protein_exons$TE_id, "exonic", "intronic")
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/targeted_genic_L1HS_L1PA4_exonic_FL_L1_DEA_crispri_iPSC.pdf", height = 5, width = 9)
+ggplot(targeted_FL_L1_DEA[which(targeted_FL_L1_DEA$genic == "genic"),], aes(x=type, fill=exonic)) + geom_histogram(stat="count") + theme_bw() + theme(text = element_text(size=15), panel.grid.minor = element_blank(), panel.grid.major = element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + facet_wrap(.~TE_subfamily, ncol = 7) + ggtitle("CRISPRi iPSC: Targeted FL L1HS-L1PA8A\noverlapping protein coding genes") + labs(x="")
+dev.off()
+```
+
+```{r}
+library(UpSetR)
+pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/hiPSC_crispri_DE_FL_L1HSPA8A.pdf", height = 4, width = 5)
+upset(fromList(list("hiPS6_crispri_g1" = L1_dysreg_hiPS6_crispri_g1$Geneid, 
+                      # "hiPS6_crispri_g2" = L1_dysreg_hiPS6_crispri_g2$Geneid, 
+                      "hiPS6_crispri_g3" = L1_dysreg_hiPS6_crispri_g3$Geneid, 
+                      "hiPS48_crispri_g3" = L1_dysreg_hiPS48_crispri_g3$Geneid, 
+                      "NES_crispra_g1" = L1_dysreg_NES_crispra_g1$Geneid, 
+                      # "NES_crispra_g2" = L1_dysreg_NES_crispra_g2$Geneid, 
+                      "NES_crispra_g3" = L1_dysreg_NES_crispra_g3$Geneid, 
+                      "hiPS6_org_crispri_g1" = L1_dysreg_hiPS6_org_crispri_g1$Geneid, 
+                      # "hiPS6_org_crispri_g2" = L1_dysreg_hiPS6_org_crispri_g2$Geneid, 
+                      "hiPS6_org_crispri_g3" = L1_dysreg_hiPS6_org_crispri_g3$Geneid, 
+                      "hiPS6_org_crispri_g3_batch2" = L1_dysreg_hiPS6_org_crispri_g3_batch2$Geneid, 
+                      "hiPS48_org_crispri_g3" = L1_dysreg_hiPS48_org_crispri_g3$Geneid, 
+                      "hiPS6_org_crispra_g1" = L1_dysreg_hiPS6_org_crispra_g1$Geneid, 
+                      # "hiPS6_org_crispra_g2" = L1_dysreg_hiPS6_org_crispra_g2$Geneid, 
+                      "hiPS6_org_crispra_g3" = L1_dysreg_hiPS6_org_crispra_g3$Geneid
+                      # "hiPS6_org_crispra_g3_batch2" = L1_dysreg_hiPS6_org_crispra_g3_batch2$Geneid
+                    )))
+dev.off()
+upset(nsets = 10, data = fromList(list("hiPS6_crispri_g1" = L1_dysreg_hiPS6_crispri_g1$Geneid, 
+                      # "hiPS6_crispri_g2" = L1_dysreg_hiPS6_crispri_g2$Geneid, 
+                      "hiPS6_crispri_g3" = L1_dysreg_hiPS6_crispri_g3$Geneid, 
+                      "hiPS48_crispri_g3" = L1_dysreg_hiPS48_crispri_g3$Geneid, 
+                      "NES_crispra_g1" = L1_dysreg_NES_crispra_g1$Geneid, 
+                      # "NES_crispra_g2" = L1_dysreg_NES_crispra_g2$Geneid, 
+                      "NES_crispra_g3" = L1_dysreg_NES_crispra_g3$Geneid)))
+
+upset(fromList(list("hiPS6_org_crispri_g1" = L1_dysreg_hiPS6_org_crispri_g1$Geneid, 
+                      # "hiPS6_org_crispri_g2" = L1_dysreg_hiPS6_org_crispri_g2$Geneid, 
+                      "hiPS6_org_crispri_g3" = L1_dysreg_hiPS6_org_crispri_g3$Geneid, 
+                      "hiPS6_org_crispri_g3_batch2" = L1_dysreg_hiPS6_org_crispri_g3_batch2$Geneid, 
+                      # "hiPS48_org_crispri_g3" = L1_dysreg_hiPS48_org_crispri_g3$Geneid, 
+                    "hiPS6_crispri_g1" = L1_dysreg_hiPS6_crispri_g1$Geneid, 
+                      # "hiPS6_crispri_g2" = L1_dysreg_hiPS6_crispri_g2$Geneid, 
+                      "hiPS6_crispri_g3" = L1_dysreg_hiPS6_crispri_g3$Geneid#, 
+                      # "hiPS48_crispri_g3" = L1_dysreg_hiPS48_crispri_g3$Geneid
+                    )), nsets=10)
+
+# "hiPS6_org_crispra_g1" = L1_dysreg_hiPS6_org_crispra_g1$Geneid, 
+#                       "hiPS6_org_crispra_g2" = L1_dysreg_hiPS6_org_crispra_g2$Geneid, 
+#                       "hiPS6_org_crispra_g3" = L1_dysreg_hiPS6_org_crispra_g3$Geneid
+
+```
+
+```{r}
+sizefactors <- fread("/Volumes/MyPassport/CRISPRi_L1s/results/tables/gene_sizeFactors.tab", data.table = F)
+colnames(sizefactors) <- c("sample", "sizeFactor")
+rownames(sizefactors) <- sizefactors$sample
+
+te_counts_norm <- te_counts[,samples]
+te_counts_norm[] <- mapply('/', te_counts_norm[,samples], sizefactors[samples,"sizeFactor"])
+FL_L1PA_norm <- te_counts_norm[FL_L1PA_annotation$TE_id,]
+
+samples_WT_hiPSC <- samples[startsWith(samples, "DA")]
+FL_L1PA_norm_WT_hiPSC <- FL_L1PA_norm[,samples_WT_hiPSC]
+FL_L1PA_norm_WT_hiPSC <- FL_L1PA_norm_WT_hiPSC[which(rowSums(FL_L1PA_norm_WT_hiPSC) > 0),]
+FL_L1PA_norm_WT_hiPSC$TE_id <- rownames(FL_L1PA_norm_WT_hiPSC)
+FL_L1PA_norm_WT_hiPSC_melt <- reshape2::melt(FL_L1PA_norm_WT_hiPSC)
+FL_L1PA_norm_WT_hiPSC_melt$variable <- factor(FL_L1PA_norm_WT_hiPSC_melt$variable, c("DA246_hIPSC_h6_S54", "DA261_hIPSC_h6_S56", "DA272_hIPSC_h6_S55", "DA238_hIPSC_h48_S57", "DA280_hIPSC_h48_S58", "DA283_hIPSC_h48_S59"))
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/hist_WT_hiPSC_FL_L1PA_norm.pdf", height = 4)
+ggplot(FL_L1PA_norm_WT_hiPSC_melt, aes(x=log2(value+1), fill=variable)) + geom_histogram() + facet_wrap(.~variable) + theme_classic() + labs(x="log2(Normalized expression + 1)")
+ggplot(FL_L1PA_norm_WT_hiPSC_melt[which(log2(FL_L1PA_norm_WT_hiPSC_melt$value+1) > 0),], aes(x=log2(value+1), fill=variable)) + geom_histogram() + facet_wrap(.~variable) + theme_classic() + labs(x="log2(Normalized expression + 1)")
+dev.off()
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/hist_WT_hiPSC_FL_L1PA_norm_density.pdf", height = 4, width = 7)
+ggplot(FL_L1PA_norm_WT_hiPSC_melt[which(log2(FL_L1PA_norm_WT_hiPSC_melt$value+1) > 0),], aes(x=log2(value+1), color = variable, fill=variable)) + geom_density(alpha=0.1)  + theme_classic() + labs(x="log2(Normalized expression + 1)")
+dev.off()
+
+FL_L1PA_norm_WT_hiPSC_melt$TE_subfam <- sapply(str_split(FL_L1PA_norm_WT_hiPSC_melt$TE_id, "_dup"), `[[`, 1)
+library(pheatmap)
+pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/heatmap_FL_L1PA_count_WT_hiPSC.pdf")
+pheatmap(t(table(FL_L1PA_norm_WT_hiPSC_melt[which(log2(FL_L1PA_norm_WT_hiPSC_melt$value+1) > 0), "variable"],
+      FL_L1PA_norm_WT_hiPSC_melt[which(log2(FL_L1PA_norm_WT_hiPSC_melt$value+1) > 0), "TE_subfam"])), cluster_rows = F, cluster_cols = F, display_numbers = T, fontsize = 20, number_format = "%.0f")
+dev.off()
+
+```
+
+## Expressed
+Will focus on L1HS-PA4
+```{r}
+L1HS_L1PA4_annotation <- TE_annotation[which(TE_annotation$TE_subfamily %in% c("L1HS","L1PA2","L1PA3","L1PA4")),]
+rownames(L1HS_L1PA4_annotation) <- L1HS_L1PA4_annotation$TE_id
+FL_L1HS_L1PA4_annotation <- L1HS_L1PA4_annotation[te_counts[which(te_counts$Geneid %in% L1HS_L1PA4_annotation$TE_id & te_counts$Length > 6000), "Geneid"],]
+
+# FL_L1HS_L1PA4_annotation <- This is the one we want to keep for the barplots and venn diagrams
+# nrow(FL_L1HS_L1PA4_annotation) --> 4005 which fits to the deeptools heatmaps
+FL_L1HS_L1PA4_norm_WT_hiPSC <- FL_L1PA_norm[FL_L1HS_L1PA4_annotation$TE_id, samples_WT_hiPSC]
+FL_L1HS_L1PA4_norm_WT_hiPSC$TE_id <- rownames(FL_L1HS_L1PA4_norm_WT_hiPSC)
+FL_L1HS_L1PA4_norm_WT_hiPSC_melt <- reshape2::melt(FL_L1HS_L1PA4_norm_WT_hiPSC)
+FL_L1HS_L1PA4_norm_WT_hiPSC_melt$variable <- factor(FL_L1HS_L1PA4_norm_WT_hiPSC_melt$variable, c("DA246_hIPSC_h6_S54", "DA261_hIPSC_h6_S56", "DA272_hIPSC_h6_S55", "DA238_hIPSC_h48_S57", "DA280_hIPSC_h48_S58", "DA283_hIPSC_h48_S59"))
+FL_L1HS_L1PA4_norm_WT_hiPSC_melt <- merge(FL_L1HS_L1PA4_norm_WT_hiPSC_melt, FL_L1HS_L1PA4_annotation, by="TE_id")
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/expression_WT_hiPS_FL_L1HS_L1PA4.pdf", height = 5, width = 8)
+FL_L1HS_L1PA4_norm_WT_hiPSC_melt %>% 
+  filter(variable %in% c("DA246_hIPSC_h6_S54", "DA261_hIPSC_h6_S56", "DA272_hIPSC_h6_S55")) %>%
+ ggplot(aes(x=log2(value+1), color=variable)) + geom_histogram(binwidth = 0.1) + geom_vline(xintercept = log2(3), linetype = "dashed") + facet_wrap(variable~TE_subfamily, ncol=4) + theme_bw() + 
+  labs(y="Num of elements", x="log2(Normalized Expression + 1)", color = "Sample")
+
+FL_L1HS_L1PA4_norm_WT_hiPSC_melt %>% 
+  filter(variable %in% c("DA238_hIPSC_h48_S57", "DA280_hIPSC_h48_S58", "DA283_hIPSC_h48_S59")) %>%
+ ggplot(aes(x=log2(value+1), color=variable)) + geom_histogram(binwidth = 0.1) + geom_vline(xintercept = log2(3), linetype = "dashed") + facet_wrap(variable~TE_subfamily, ncol=4) + theme_bw() + 
+  labs(y="Num of elements", x="log2(Normalized Expression + 1)", color = "Sample")
+dev.off()
+
+
+FL_L1HS_L1PA4_norm_WT_hiPSC_melt_expressed <- FL_L1HS_L1PA4_norm_WT_hiPSC_melt[which(log2(FL_L1HS_L1PA4_norm_WT_hiPSC_melt$value+1) >= log2(3)),]
+FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed <- unique(FL_L1HS_L1PA4_norm_WT_hiPSC_melt_expressed$TE_id)
+
+FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed <- te_counts[FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed, c("Chr", "Start", "End", "Geneid", "Strand")]
+FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed$dot <- "."
+FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed <- FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed[, c("Chr", "Start", "End", "Geneid", "dot", "Strand")]
+
+write.table(FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed, file = "/Volumes/MyPassport/CRISPRi_L1s/results/tables/FL_L1PA_WT_hiPSC_expressed.bed",  sep="\t", quote=F, col.names = F, row.names = F)
+```
+
+### Genic vs Intergenic
+```{r}
+expressed_L1_protein_genes <- read.table("/Volumes/MyPassport/CRISPRi_L1s/results/tables/FL_L1PA_WT_hiPSC_expressed_intersect_protein_genes.bed")
+colnames(expressed_L1_protein_genes) <- c("gene_chr", "gene_start", "gene_end", "gene_name", "dot", "gene_strand", 
+                                         "TE_chr", "TE_start", "TE_end", "TE_id", "dot2", "TE_strand", "overlap")
+
+FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed$genic <- ifelse(FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed$Geneid %in% expressed_L1_protein_genes$TE_id, "genic", "intergenic")
+FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed$TE_subfamily <- sapply(str_split(FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed$Geneid, "_dup"), `[[`, 1)
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/expressed_L1HS_L1PA4_genic_FL_L1_WT_iPSC.pdf", height = 4, width = 6)
+ggplot(FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed, aes(x=TE_subfamily, fill=genic)) + geom_histogram(stat="count") + theme_bw() + theme(text = element_text(size=15), panel.grid.minor = element_blank(), panel.grid.major = element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))  + ggtitle("WT iPSC: Expressed FL L1HS-L1PA4\nGenic / intergenic") + labs(x="") + lims(y=c(0, 1000))
+dev.off()
+```
+
+### Protein coding overlapping genes
+Orientation of L1s --> Sense vs Antisense
+```{r}
+expressed_L1_protein_genes$orientation <- ifelse(expressed_L1_protein_genes$gene_strand == expressed_L1_protein_genes$TE_strand, "sense", "antisense")
+expressed_L1_protein_genes$TE_subfamily <- sapply(str_split(expressed_L1_protein_genes$TE_id, "_"), `[[`, 1)
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/expressed_genic_L1HS_L1PA4_orientation_FL_L1_WT_iPSC.pdf", height = 4, width = 6)
+ggplot(expressed_L1_protein_genes, aes(x=TE_subfamily, fill=orientation)) + geom_histogram(stat="count") + theme_bw() + theme(text = element_text(size=15), panel.grid.minor = element_blank(), panel.grid.major = element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + ggtitle("WT iPSC: Expressed FL L1HS-L1PA4\noverlapping protein coding genes") + labs(x="") + lims(y=c(0, 300))
+dev.off()
+```
+
+Exon vs Intron
+```{r}
+expressed_L1_protein_exons <- read.table("/Volumes/MyPassport/CRISPRi_L1s/results/tables/FL_L1_WT_iPSC_expressed_intersect_protein_exons.bed")
+colnames(expressed_L1_protein_exons) <- c("exon_chr", "exon_start", "exon_end", "exon_name", "dot", "exon_strand", 
+                                         "TE_chr", "TE_start", "TE_end", "TE_id", "dot2", "TE_strand", "overlap")
+
+FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed$exonic <- ifelse(FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed$Geneid %in% expressed_L1_protein_exons$TE_id, "exonic", "intronic")
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/expressed_genic_L1HS_L1PA4_exonic_FL_L1_WT_iPSC.pdf", height = 4, width = 6)
+ggplot(FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed[which(FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed$genic == "genic"),], aes(x=TE_subfamily, fill=exonic)) + geom_histogram(stat="count") + theme_bw() + theme(text = element_text(size=15), panel.grid.minor = element_blank(), panel.grid.major = element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))  + ggtitle("WT iPSC: Expressed FL L1HS-L1PA4\noverlapping protein coding genes") + labs(x="") + lims(y=c(0, 320))
+dev.off()
+```
+# Organoids
+
+```{r}
+samplesheet_org <- samplesheet[which(endsWith(as.character(samplesheet$cell), "_org")),]
+samplesheet_org_CRISPRi <- samplesheet_org[which(samplesheet_org$experiment == "crispri"),]
+rownames(samplesheet_org_CRISPRi) <- samplesheet_org_CRISPRi$samples
+samples_LacZ_org <- c(rownames(samplesheet_org_CRISPRi[which(samplesheet_org_CRISPRi$guide == "LacZ"),]))
+
+FL_L1HS_L1PA4_norm_LacZ_org <- FL_L1PA_norm[FL_L1HS_L1PA4_annotation$TE_id,samples_LacZ_org]
+FL_L1HS_L1PA4_norm_LacZ_org$TE_id <- rownames(FL_L1HS_L1PA4_norm_LacZ_org)
+FL_L1HS_L1PA4_norm_LacZ_org_melt <- reshape2::melt(FL_L1HS_L1PA4_norm_LacZ_org)
+FL_L1HS_L1PA4_norm_LacZ_org_melt <- merge(FL_L1HS_L1PA4_norm_LacZ_org_melt, FL_L1HS_L1PA4_annotation, by="TE_id")
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/expression_LacZ_org_FL_L1HS_L1PA4.pdf", height = 10, width = 18)
+FL_L1HS_L1PA4_norm_LacZ_org_melt %>% 
+ ggplot(aes(x=log2(value+1), color=variable)) + geom_histogram(binwidth = 0.1) + geom_vline(xintercept = log2(3), linetype = "dashed") + 
+  facet_wrap(variable~TE_subfamily, ncol=8) + theme_bw() + 
+  labs(y="Num of elements", x="log2(Normalized Expression + 1)", color = "Sample")
+dev.off()
+
+FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed <- FL_L1HS_L1PA4_norm_LacZ_org_melt[which(log2(FL_L1HS_L1PA4_norm_LacZ_org_melt$value+1) >= log2(3)),]
+FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed <- unique(FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed$TE_id)
+
+FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed_bed <- te_counts[FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed, c("Chr", "Start", "End", "Geneid", "Strand")]
+FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed_bed$dot <- "."
+FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed_bed <- FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed_bed[, c("Chr", "Start", "End", "Geneid", "dot", "Strand")]
+
+write.table(FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed_bed, file = "/Volumes/MyPassport/CRISPRi_L1s/results/tables/FL_L1PA_LacZ_org_expressed.bed",  sep="\t", quote=F, col.names = F, row.names = F)
+
+```
+
+
+```{r}
+library(UpSetR)
+pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/venn_diagram_LacZ_org_WT_hiPSC/upset_LacZ_org_WT_hiPS.pdf")
+upset(fromList(list("LacZ_org" = FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed_bed$Geneid,
+"WT_hiPS" = FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed$Geneid)))
+dev.off()
+# Only expressed in organoids
+write.table(FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed_bed[which(!FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed_bed$Geneid %in% FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed$Geneid),], file = "/Volumes/MyPassport/CRISPRi_L1s/results/tables/venn_diagram_LacZ_org_WT_hiPSC/FL_L1PA_LacZ_org_only_expressed.bed",  sep="\t", quote=F, col.names = F, row.names = F)
+
+# Expressed in both
+write.table(FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed_bed[which(FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed_bed$Geneid %in% FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed$Geneid),], file = "/Volumes/MyPassport/CRISPRi_L1s/results/tables/venn_diagram_LacZ_org_WT_hiPSC/FL_L1PA_LacZ_org_WT_hiPSC_expressed.bed",  sep="\t", quote=F, col.names = F, row.names = F)
+
+# Only expressed in hiPS
+write.table(FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed[which(!FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed$Geneid %in% FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed_bed$Geneid),], file = "/Volumes/MyPassport/CRISPRi_L1s/results/tables/venn_diagram_LacZ_org_WT_hiPSC/FL_L1PA_WT_hiPSC_only_expressed.bed",  sep="\t", quote=F, col.names = F, row.names = F)
+
+```
+
+
+## Expressed
+### Genic vs Intergenic
+```{r}
+expressed_L1_protein_genes <- read.table("/Volumes/MyPassport/CRISPRi_L1s/results/tables/FL_L1PA_LacZ_org_expressed_intersect_protein_genes.bed")
+colnames(expressed_L1_protein_genes) <- c("gene_chr", "gene_start", "gene_end", "gene_name", "dot", "gene_strand", 
+                                         "TE_chr", "TE_start", "TE_end", "TE_id", "dot2", "TE_strand", "overlap")
+
+FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed_bed$genic <- ifelse(FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed_bed$Geneid %in% expressed_L1_protein_genes$TE_id, "genic", "intergenic")
+FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed_bed$TE_subfamily <- sapply(str_split(FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed_bed$Geneid, "_dup"), `[[`, 1)
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/expressed_L1HS_L1PA4_genic_FL_L1_LacZ_org.pdf", height = 4, width = 6)
+ggplot(FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed_bed, aes(x=TE_subfamily, fill=genic)) + geom_histogram(stat="count") + theme_bw() + theme(text = element_text(size=15), panel.grid.minor = element_blank(), panel.grid.major = element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))  + ggtitle("LacZ organoids: Expressed FL L1HS-L1PA4\nGenic / intergenic") + labs(x="") + lims(y=c(0, 680))
+dev.off()
+```
+
+### Protein coding overlapping genes
+Orientation of L1s --> Sense vs Antisense
+```{r}
+expressed_L1_protein_genes$orientation <- ifelse(expressed_L1_protein_genes$gene_strand == expressed_L1_protein_genes$TE_strand, "sense", "antisense")
+expressed_L1_protein_genes$TE_subfamily <- sapply(str_split(expressed_L1_protein_genes$TE_id, "_"), `[[`, 1)
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/expressed_genic_L1HS_L1PA4_orientation_FL_L1_LacZ_org.pdf", height = 4, width = 6)
+ggplot(expressed_L1_protein_genes, aes(x=TE_subfamily, fill=orientation)) + geom_histogram(stat="count") + theme_bw() + theme(text = element_text(size=15), panel.grid.minor = element_blank(), panel.grid.major = element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + ggtitle("LacZ organoids: Expressed FL L1HS-L1PA4\noverlapping protein coding genes") + labs(x="") + lims(y=c(0, 270))
+dev.off()
+```
+
+Exon vs Intron
+```{r}
+expressed_L1_protein_exons <- read.table("/Volumes/MyPassport/CRISPRi_L1s/results/tables/FL_L1_LacZ_org_expressed_intersect_protein_exons.bed")
+colnames(expressed_L1_protein_exons) <- c("exon_chr", "exon_start", "exon_end", "exon_name", "dot", "exon_strand", 
+                                         "TE_chr", "TE_start", "TE_end", "TE_id", "dot2", "TE_strand", "overlap")
+
+FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed_bed$exonic <- ifelse(FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed_bed$Geneid %in% expressed_L1_protein_exons$TE_id, "exonic", "intronic")
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/expressed_genic_L1HS_L1PA4_exonic_FL_L1_LacZ_org.pdf", height = 4, width = 6)
+ggplot(FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed_bed[which(FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed_bed$genic == "genic"),], aes(x=TE_subfamily, fill=exonic)) + geom_histogram(stat="count") + theme_bw() + theme(text = element_text(size=15), panel.grid.minor = element_blank(), panel.grid.major = element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))  + ggtitle("LacZ organoids: Expressed FL L1HS-L1PA4\noverlapping protein coding genes") + labs(x="") + lims(y=c(0, 260))
+dev.off()
+```
+
+
+```{r}
+candidate_L1s <- c("L1PA2_dup2271", # ELAPOR
+                   "L1PA3_dup9610", "L1PA2_dup4399", #"WDR72"
+                   "L1PA3_dup10384", "L1PA2_dup4791", # PLCB1,
+                   "L1PA2_dup623", #PPP1R1C
+                   "L1PA2_dup3884", "L1PA2_dup3885", # SLCO1A2 
+                   "L1PA3_dup1045", #REG1A
+                   "L1PA3_dup4900", # DYNC1I1
+                   "L1PA3_dup621", # CFHR3
+                   "L1PA2_dup2180") # POU6F2
+  
+candidate_te_counts_norm <- FL_L1PA_norm[candidate_L1s,]
+candidate_L1_boxplots <- list()
+for(i in names(samplesheet_comparisons)){
+  candidate_L1_boxplots[[i]] <- list()
+  for(L1 in candidate_L1s){
+    coldata <- samplesheet_comparisons[[i]]
+    group_candidate_te_counts_norm_melt <- reshape2::melt(candidate_te_counts_norm[L1, coldata$samples])
+    group_candidate_te_counts_norm_melt <- merge(group_candidate_te_counts_norm_melt, coldata, by.x="variable", by.y="samples")
+    max_lim <- max(group_candidate_te_counts_norm_melt$value) + mean(group_candidate_te_counts_norm_melt$value)/2
+    
+    padj_L1s <- te_res_list_df[[i]][candidate_L1s, "padj", drop=F]
+    padj_L1s$group1 <- unique(group_candidate_te_counts_norm_melt$condition)[1]
+    padj_L1s$group2 <- unique(group_candidate_te_counts_norm_melt$condition)[2]
+    padj_L1s$padj <- format(padj_L1s$padj, digits = 2)
+    padj_L1s_split <- split(padj_L1s, rownames(padj_L1s))
+    candidate_L1_boxplots[[i]][[L1]] <-
+      ggplot(data = group_candidate_te_counts_norm_melt, aes(x=condition, y=value)) +
+      geom_boxplot(alpha=0.7) +
+      geom_point(color="black", alpha=0.7) +
+      scale_fill_manual(values = c("darkturquoise", "tomato")) +
+      theme_bw() + labs(x="", y="Normalized expression", fill="") + 
+      ggtitle(L1, subtitle = i) +
+      stat_pvalue_manual(as.data.frame(padj_L1s_split[[L1]]), y.position = max(group_candidate_te_counts_norm_melt$value)+0.2*sd(group_candidate_te_counts_norm_melt$value), label = "padj") +
+      lims(y = c(0,  max(group_candidate_te_counts_norm_melt$value)+0.4*sd(group_candidate_te_counts_norm_melt$value)))
+    
+  }
+}
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/candidates_boxplots_L1s.pdf", height = 8, width = 10)
+ggarrange(plotlist = candidate_L1_boxplots$hiPS6_crispri_g1)
+# ggarrange(plotlist = candidate_L1_boxplots$hiPS6_crispri_g2)
+ggarrange(plotlist = candidate_L1_boxplots$hiPS6_crispri_g3)
+ggarrange(plotlist = candidate_L1_boxplots$hiPS48_crispri_g3)
+ggarrange(plotlist = candidate_L1_boxplots$NES_crispra_g1)
+# ggarrange(plotlist = candidate_L1_boxplots$NES_crispra_g2)
+ggarrange(plotlist = candidate_L1_boxplots$NES_crispra_g3)
+ggarrange(plotlist = candidate_L1_boxplots$hiPS6_org_crispri_g1)
+# ggarrange(plotlist = candidate_L1_boxplots$hiPS6_org_crispri_g2)
+ggarrange(plotlist = candidate_L1_boxplots$hiPS6_org_crispri_g3)
+ggarrange(plotlist = candidate_L1_boxplots$hiPS6_org_crispri_g3_batch2)
+ggarrange(plotlist = candidate_L1_boxplots$hiPS48_org_crispri_g3)
+ggarrange(plotlist = candidate_L1_boxplots$hiPS6_org_crispra_g1)
+# ggarrange(plotlist = candidate_L1_boxplots$hiPS6_org_crispra_g2)
+ggarrange(plotlist = candidate_L1_boxplots$hiPS6_org_crispra_g3)
+ggarrange(plotlist = candidate_L1_boxplots$hiPS6_org_crispra_g3_batch2)
+dev.off()
+
+```
+
+```{r}
+
+```
+

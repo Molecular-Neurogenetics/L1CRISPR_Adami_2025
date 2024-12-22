@@ -1,0 +1,98 @@
+---
+title: "CUT&RUN peaks"
+output: html_notebook
+---
+
+## Read data
+```{r}
+library(data.table)
+library(stringr)
+path <- "/Volumes/MyPassport/CRISPRi_L1s/bulk/2_tagdirs/"
+samples <- str_remove_all(pattern = "_tagdir", string = list.files(path))
+samples <- samples[which(!grepl(pattern = "IgG", samples))]
+peaks <- list()
+# dCas9 gRNA1 CRISPRi
+peaks[["AA_hiPS6_L1_CRISPRi_gRNA3_LV3824_lightXL_CUTnRUN_Cas9_S11"]] <- fread(paste(path, "AA_hiPS6_L1_CRISPRi_gRNA3_LV3824_lightXL_CUTnRUN_Cas9_S11_peaks.txt", sep=""), data.table = F)
+# dCas9 LacZ CRISPRi
+peaks[["AA_hiPS6_L1_CRISPRi_LacZ_LV3599_lightXL_CUTnRUN_Cas9_S10"]] <- fread(paste(path, "AA_hiPS6_L1_CRISPRi_LacZ_LV3599_lightXL_CUTnRUN_Cas9_S10_peaks.txt", sep=""), data.table = F)
+
+# hiPS6 H3K4me3 in gRNA1 CRISPRi
+peaks[["AA_hiPS6_L1_CRISPRi_LV3824_H3K4me3_S25"]] <- fread(paste(path, "AA_hiPS6_L1_CRISPRi_LV3824_H3K4me3_S25_regions.txt", sep=""), data.table = F)
+# hiPS6 H3K4me3 in LacZ 
+peaks[["AA_hiPS6_LacZ_CRISPRi_LV3599_H3K4me3_S22"]] <- fread(paste(path, "AA_hiPS6_LacZ_CRISPRi_LV3599_H3K4me3_S22_regions.txt", sep=""), data.table = F)
+
+# WT hiPSCs
+peaks[["hiPS48_H3K4me3_S25"]] <- fread(paste(path, "hiPS48_H3K4me3_S25_tagdir_regions.txt", sep=""), data.table = F)
+peaks[["hiPS48_H3K9me3_S26"]] <- fread(paste(path, "hiPS48_H3K9me3_S26_tagdir_regions.txt", sep=""), data.table = F)
+peaks[["hiPS6_H3K4me3_S22"]] <- fread(paste(path, "hiPS6_H3K4me3_S22_tagdir_regions.txt", sep=""), data.table = F)
+peaks[["hiPS6_H3K9me3_S23"]] <- fread(paste(path, "hiPS6_H3K9me3_S23_tagdir_regions.txt", sep=""), data.table = F)
+
+# Parse for valid chrs
+for(sample in names(peaks)) peaks[[sample]] <- peaks[[sample]][which(peaks[[sample]]$chr %in% paste("chr", c(1:22, "X", "Y", "M"), sep="")),]
+
+```
+
+## Add 100bp windows around the peaks. Intersect gRNA1 and LacZ dCas9 for gRNA1-only peaks.
+```{r}
+library(bedr)
+add_windows_coords <- function(df, window = 0){
+  if(window > 0){
+    for(i in 1:nrow(df)){
+      df[i,"start"] <- df[i,"start"] - window
+      df[i,"start"] <- ifelse(df[i,"start"] <= 0, 1, df[i,"start"])
+      df[i,"end"] <- df[i,"end"] + window
+    }
+  }
+  tmp <- data.frame(id = rownames(df), coords = paste(df$chr, paste(df$start, df$end, sep = "-"), sep = ":"))
+  tmp <- tmp[is.valid.region(tmp$coords),]
+  return(tmp$coords)
+}
+
+for(sample in names(peaks)){
+  peaks[[sample]]$coords <- add_windows_coords(df = peaks[[sample]], window = 100)  
+  peaks[[sample]] <- peaks[[sample]][match(bedr.sort.region(peaks[[sample]]$coords), peaks[[sample]]$coords),]
+}
+
+
+lightXL <- peaks$AA_hiPS6_L1_CRISPRi_gRNA3_LV3824_lightXL_CUTnRUN_Cas9_S11[which(!peaks$AA_hiPS6_L1_CRISPRi_gRNA3_LV3824_lightXL_CUTnRUN_Cas9_S11$coords %in.region%
+peaks$AA_hiPS6_L1_CRISPRi_LacZ_LV3599_lightXL_CUTnRUN_Cas9_S10$coords),]
+lightXL$dot <- "."
+write.table(lightXL[,c("chr", "start", "end", "#PeakID", "dot", "strand")], file = "/Volumes/MyPassport/CRISPRi_L1s/results/tables/lightXL_gRNA3_peaks_only.bed", sep="\t", col.names = F, row.names = F, quote = F)
+
+# Write BED files
+peaks$AA_hiPS6_L1_CRISPRi_gRNA3_LV3824_lightXL_CUTnRUN_Cas9_S11$dot <- "."
+write.table(peaks$AA_hiPS6_L1_CRISPRi_gRNA3_LV3824_lightXL_CUTnRUN_Cas9_S11[,c("chr", "start", "end", "#PeakID", "dot", "strand")], file = "/Volumes/MyPassport/CRISPRi_L1s/bulk/2_tagdirs/AA_hiPS6_L1_CRISPRi_gRNA3_LV3824_lightXL_CUTnRUN_Cas9_S11_peaks.bed", sep="\t", col.names = F, row.names = F, quote = F)
+peaks$AA_hiPS6_L1_CRISPRi_LacZ_LV3599_lightXL_CUTnRUN_Cas9_S10$dot <- "."
+write.table(peaks$AA_hiPS6_L1_CRISPRi_LacZ_LV3599_lightXL_CUTnRUN_Cas9_S10[,c("chr", "start", "end", "#PeakID", "dot", "strand")], file = "/Volumes/MyPassport/CRISPRi_L1s/bulk/2_tagdirs/AA_hiPS6_L1_CRISPRi_LacZ_LV3599_lightXL_CUTnRUN_Cas9_S10_peaks.bed", sep="\t", col.names = F, row.names = F, quote = F)
+
+peaks$AA_hiPS6_L1_CRISPRi_LV3824_H3K4me3_S25$dot <- "."
+write.table(peaks$AA_hiPS6_L1_CRISPRi_LV3824_H3K4me3_S25[,c("chr", "start", "end", "#PeakID", "dot", "strand")], file = "/Volumes/MyPassport/CRISPRi_L1s/bulk/2_tagdirs/AA_hiPS6_L1_CRISPRi_LV3824_H3K4me3_S25_regions.bed", sep="\t", col.names = F, row.names = F, quote = F)
+peaks$AA_hiPS6_LacZ_CRISPRi_LV3599_H3K4me3_S22$dot <- "."
+write.table(peaks$AA_hiPS6_LacZ_CRISPRi_LV3599_H3K4me3_S22[,c("chr", "start", "end", "#PeakID", "dot", "strand")], file = "/Volumes/MyPassport/CRISPRi_L1s/bulk/2_tagdirs/AA_hiPS6_LacZ_CRISPRi_LV3599_H3K4me3_S22_regions.bed", sep="\t", col.names = F, row.names = F, quote = F)
+```
+
+## H3K4me3 peaks
+
+Write BED files for both cell lines to merge them (common peaks) and intersect them with FL-L1.
+
+```{r}
+peaks$hiPS48_H3K4me3_S25$dot <- "."
+peaks$hiPS6_H3K4me3_S22$dot <- "."
+write.table(peaks$hiPS48_H3K4me3_S25[,c("chr", "start", "end", "#PeakID", "dot", "strand")], file = "/Volumes/MyPassport/CRISPRi_L1s/bulk/2_tagdirs/hiPS48_H3K4me3_S25_tagdir_regions.bed", sep="\t", col.names = F, row.names = F, quote = F)
+write.table(peaks$hiPS6_H3K4me3_S22[,c("chr", "start", "end", "#PeakID", "dot", "strand")], file = "/Volumes/MyPassport/CRISPRi_L1s/bulk/2_tagdirs/hiPS6_H3K4me3_S22_tagdir_regions.bed", sep="\t", col.names = F, row.names = F, quote = F)
+
+peaks_H3K4me3 <- rbind(peaks$hiPS48_H3K4me3_S25[,c("chr", "start", "end", "#PeakID", "dot", "strand")],
+                       peaks$hiPS6_H3K4me3_S22[,c("chr", "start", "end", "#PeakID", "dot", "strand")])
+peaks_H3K4me3$coords <- add_windows_coords(df = peaks_H3K4me3)  
+peaks_H3K4me3 <- peaks_H3K4me3[match(bedr.sort.region(peaks_H3K4me3$coords), peaks_H3K4me3$coords),] # Sort regions
+
+write.table(peaks_H3K4me3[,c("chr", "start", "end", "#PeakID", "dot", "strand")], file = "/Volumes/MyPassport/CRISPRi_L1s/bulk/2_tagdirs/H3K4me3_tagdir_regions.bed", sep="\t", col.names = F, row.names = F, quote = F)
+
+# This is what i did to get the H3K4me3 peaks that overlap at FL-L1s:
+# bedtools merge -i H3K4me3_tagdir_regions.bed -d 10 > H3K4me3_tagdir_regions_merged_hiPS6_hiPS48.bed
+# Promoter file from DNA methylation analysis
+# grep 'L1HS\|L1PA2\|L1PA3\|L1PA4' /scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/annotations/hg38/rmsk/hg38.fa.fulllength.L1HS_L1PA.bed | tail -n +2 | awk '{if($6 == "-"){$2=$3-900}else{$3=$2+900}; print $0}' OFS="\t" > ~/inbox/FL_L1HS_PA4_promoter.bed
+# bedtools intersect -a ../results/tables/FL_L1HS_PA4_promoter.bed -b H3K4me3_tagdir_regions_merged_hiPS6_hiPS48.bed -wo | wc -l
+# 133
+```
+

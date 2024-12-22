@@ -1,0 +1,207 @@
+---
+title: "Exon visualization"
+output: html_notebook
+---
+
+## Read data
+
+```{r}
+library(data.table)
+library(ggplot2)
+library(ggpubr)
+library(stringr)
+library(DESeq2)
+library(bedr)
+
+gene_annotation <- fread("/Volumes/MyPassport/annotations/human/gencode/v38/gencode.v38.annotation.gene_names.tab", data.table = F, skip=1, header = F)
+colnames(gene_annotation) <- c("Geneid", "gene_name", "gene_type")
+
+samplesheet <- fread("/Volumes/MyPassport/CRISPRi_L1s/bulk/samplesheet_L1crispr.tab", data.table = F, header = T)
+samplesheet <- samplesheet[which(!samplesheet$samples %in% c("AA11_Sai2_lv3775_B_CRISPRa_S11", "AA_Sai2_L1_CRISPRa_LV3776_c_S29")),]
+samplesheet_list <- split(samplesheet, f = list(samplesheet$cell, samplesheet$experiment, samplesheet$guide, samplesheet$seqnum))
+samplesheet_list <- samplesheet_list[sapply(samplesheet_list,nrow)>0] 
+
+samplesheet_comparisons <- list(
+  "hiPS6_crispri_g1" = rbind(samplesheet_list$hiPS6.crispri.g1.CTG_JGJSeq156_159_160truseq, 
+                             samplesheet_list$hiPS6.crispri.LacZ.CTG_JGJSeq156_159_160truseq),
+  "hiPS6_crispri_g2" = rbind(samplesheet_list$hiPS6.crispri.g2.CTG_JGJSeq205_207_208_214_truseq_2023_021,
+                             samplesheet_list$hiPS6.crispri.LacZ.CTG_JGJSeq205_207_208_214_truseq_2023_021),
+  "hiPS6_crispri_g3" = rbind(samplesheet_list$hiPS6.crispri.g3.CTG_JGJSeq205_207_208_214_truseq_2023_021,
+                             samplesheet_list$hiPS6.crispri.LacZ.CTG_JGJSeq205_207_208_214_truseq_2023_021),
+  "hiPS48_crispri_g3" = rbind(samplesheet_list$hiPS48.crispri.g3.testdata_ctg_2023_50,
+                              samplesheet_list$hiPS48.crispri.LacZ.testdata_ctg_2023_50),
+  "NES_crispra_g1" = rbind(samplesheet_list$NES.crispra.g1.CTG_JGJSeq156_159_160truseq,
+                           samplesheet_list$NES.crispra.NTC.CTG_JGJSeq156_159_160truseq),
+  "NES_crispra_g2" = rbind(samplesheet_list$NES.crispra.g2.CTG_JGJSeq233_237_250_257_2023_145,
+                           samplesheet_list$NES.crispra.LacZ.CTG_JGJSeq233_237_250_257_2023_145),
+  "NES_crispra_g3" = rbind(samplesheet_list$NES.crispra.g3.CTG_JGJSeq233_237_250_257_2023_145,
+                           samplesheet_list$NES.crispra.LacZ.CTG_JGJSeq233_237_250_257_2023_145),
+  "hiPS48_org_crispri_g3" = rbind(samplesheet_list$hiPS48_org.crispri.g3.CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX,
+                                  samplesheet_list$hiPS48_org.crispri.LacZ.CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX),
+  "hiPS6_org_crispri_g3" = rbind(samplesheet_list$hiPS6_org.crispri.g3.CTG_JGJSeq233_237_250_257_2023_145,
+                                  samplesheet_list$hiPS6_org.crispri.LacZ.CTG_JGJSeq233_237_250_257_2023_145),
+  "hiPS6_org_crispra_g3" = rbind(samplesheet_list$hiPS6_org.crispra.g3.CTG_JGJSeq233_237_250_257_2023_145,
+                                  samplesheet_list$hiPS6_org.crispra.LacZ.CTG_JGJSeq233_237_250_257_2023_145),
+  "hiPS6_org_crispri_g1" = rbind(samplesheet_list$hiPS6_org.crispri.g1.CTG_2024_017_Seq296_297_305_315_bulkRNASeq,
+                                 samplesheet_list$hiPS6_org.crispri.LacZ.CTG_2024_017_Seq296_297_305_315_bulkRNASeq),
+  "hiPS6_org_crispri_g2" = rbind(samplesheet_list$hiPS6_org.crispri.g2.CTG_2024_017_Seq296_297_305_315_bulkRNASeq,
+                                 samplesheet_list$hiPS6_org.crispri.LacZ.CTG_2024_017_Seq296_297_305_315_bulkRNASeq),
+  "hiPS6_org_crispri_g3_batch2" = rbind(samplesheet_list$hiPS6_org.crispri.g3.CTG_2024_017_Seq296_297_305_315_bulkRNASeq,
+                                 samplesheet_list$hiPS6_org.crispri.LacZ.CTG_2024_017_Seq296_297_305_315_bulkRNASeq),
+  "hiPS6_org_crispra_g1" = rbind(samplesheet_list$hiPS6_org.crispra.g1.CTG_2024_017_Seq296_297_305_315_bulkRNASeq,
+                                 samplesheet_list$hiPS6_org.crispra.LacZ.CTG_2024_017_Seq296_297_305_315_bulkRNASeq),
+  "hiPS6_org_crispra_g2" = rbind(samplesheet_list$hiPS6_org.crispra.g2.CTG_2024_017_Seq296_297_305_315_bulkRNASeq,
+                                 samplesheet_list$hiPS6_org.crispra.LacZ.CTG_2024_017_Seq296_297_305_315_bulkRNASeq),
+  "hiPS6_org_crispra_g3_batch2" = rbind(samplesheet_list$hiPS6_org.crispra.g3.CTG_2024_017_Seq296_297_305_315_bulkRNASeq,
+                                 samplesheet_list$hiPS6_org.crispra.LacZ.CTG_2024_017_Seq296_297_305_315_bulkRNASeq)
+)
+
+
+library(openxlsx)
+path <- "/Volumes/MyPassport/CRISPRi_L1s/bulk/gene_counts/unique/"
+# samples <- samplesheet$samples
+samples <- unique(do.call(rbind, samplesheet_list))$samples
+# Rerun featurecounts to the organoids 
+
+for(i in 1:length(samples)){
+  sample <- samples[i]
+  if(file.exists(paste(path, sample, "_exon_count_matrix_2.csv", sep=""))){
+    if(!exists('exon_counts')){
+      exon_counts <- fread(paste(path, sample, "_exon_count_matrix_2.csv", sep=""), data.table = F)    
+      colnames(exon_counts)[ncol(exon_counts)] <- sample
+      rownames(exon_counts) <- make.unique(exon_counts$Geneid)
+      row_order <- rownames(exon_counts)
+    }else{
+      tmp <- fread(paste(path, sample, "_exon_count_matrix_2.csv", sep=""), data.table = F)
+      colnames(tmp)[ncol(tmp)] <- sample
+      rownames(tmp) <- make.unique(tmp$Geneid)
+      exon_counts <- cbind(exon_counts[row_order,], tmp[row_order,sample,drop=F])
+    }
+  }
+}
+```
+
+## Normalize exon counts with gene size factors 
+
+See gene_DEA_L1crispri.Rmd
+```{r}
+sizeFactor <- read.table("/Volumes/MyPassport/CRISPRi_L1s/results/tables/gene_sizeFactors.tab")
+colnames(sizeFactor) <- c("sample", "sizeFactor")
+sizeFactor <- sizeFactor[which(sizeFactor$sample %in% colnames(exon_counts)),]
+rownames(sizeFactor) <- sizeFactor$sample
+
+exon_counts_norm <- exon_counts[,sizeFactor$sample]
+exon_counts_norm[] <- mapply('/', exon_counts_norm[,sizeFactor$sample], sizeFactor[sizeFactor$sample,"sizeFactor"])
+
+exon_annotation <- fread("/Volumes/MyPassport/annotations/human/gencode/v38/gencode.v38.annotation.basic.exons.gene_names.tab", data.table = F, skip=1, header = T)
+exon_bed <- fread("/Volumes/MyPassport/annotations/human/gencode/v38/gencode.v38.annotation.basic.exons.bed", data.table = F, skip=1)
+colnames(exon_bed) <- c("chr", "start", "end", "dot", "strand", "dot2", "exon_id")
+
+
+add_windows_coords <- function(df, window = 0){
+  if(window > 0){
+    for(i in 1:nrow(df)){
+      df[i,"start"] <- df[i,"start"] - window
+      df[i,"start"] <- ifelse(df[i,"start"] <= 0, 1, df[i,"start"])
+      df[i,"end"] <- df[i,"end"] + window
+    }
+  }
+  tmp <- data.frame(id = rownames(df), coords = str_replace_all(paste(df$chr, paste(format(df$start, scientific = F), format(df$end, scientific = F), sep = "-"), sep = ":"), pattern = " ", replacement = ""))
+  return(tmp)
+}
+
+exon_bed$coords <- add_windows_coords(exon_bed)$coords
+exon_bed <- exon_bed[is.valid.region(exon_bed$coords),]
+exon_bed <- exon_bed[match(bedr.sort.region(exon_bed$coords), exon_bed$coords),]
+rownames(exon_bed) <- make.unique(exon_bed$exon_id)
+```
+
+## Get the normalized counts of the longest transcripts' exons for fig4 examples
+```{r}
+candidates <- c("ELAPOR2", "PPP1R1C")
+# Subset exon quantification of protein coding candidates
+exons_candidates <- exon_annotation[which(exon_annotation$gene_name %in% candidates),]
+
+# Let's use only the longest transcript
+transcripts_bed <- fread("/Volumes/MyPassport/annotations/human/gencode/v38/gencode.v38.annotation.transcripts.bed", data.table = F, skip = 1, header = F)
+colnames(transcripts_bed) <- c("chr", "start", "end", "dot", "strand", "dot2", "gene_id", "transcript_id", "gene_name")
+transcripts_bed$length <- transcripts_bed$end - transcripts_bed$start
+candidate_transcripts <- split(transcripts_bed[transcripts_bed$transcript_id %in% unique(exons_candidates$transcript_id),], f = transcripts_bed[transcripts_bed$transcript_id %in% unique(exons_candidates$transcript_id),"gene_name"])
+
+candidate_transcripts <- rbind(candidate_transcripts$ELAPOR2[which(candidate_transcripts$ELAPOR2$length == max(candidate_transcripts$ELAPOR2$length)), c("transcript_id", "gene_name")],
+                               candidate_transcripts$PPP1R1C[which(candidate_transcripts$PPP1R1C$length == max(candidate_transcripts$PPP1R1C$length)), c("transcript_id", "gene_name")])
+
+exons_candidates <- exons_candidates[which(exons_candidates$transcript_id %in% candidate_transcripts$transcript_id),]
+```
+
+## Plot!
+
+```{r}
+rownames(exons_candidates) <- exons_candidates$exon_id
+rownames(samplesheet) <- samplesheet$samples
+
+exon_counts_norm_candidates <- exon_counts_norm[exons_candidates$exon_id,]
+exon_counts_norm_candidates <- merge(exon_counts_norm_candidates, unique(exon_annotation[,c("exon_id", "gene_name")]), by.x="row.names", by.y="exon_id")
+colnames(exon_counts_norm_candidates)[1] <- "exon_id"
+
+# Get coordinates of each exon (we need them to sort the exons by position)
+exon_counts_norm_candidates <- merge(exon_counts_norm_candidates, unique(exon_bed[,c("exon_id", "coords")]), by="exon_id")
+exon_counts_norm_candidates$exon_id_coords <- paste(exon_counts_norm_candidates$exon_id, exon_counts_norm_candidates$coords, sep="  ")
+rownames(exon_counts_norm_candidates) <- exon_counts_norm_candidates$exon_id
+
+data_summary <- function(data, varname, groupnames){
+  require(plyr)
+  summary_func <- function(x, col){
+    c(mean = mean(x[[col]], na.rm=TRUE),
+      se = sd(x[[col]])/sqrt(length(x[[col]])))# sd = sd(x[[col]], na.rm=TRUE))
+  }
+  data_sum<-ddply(data, groupnames, .fun=summary_func,
+                  varname)
+  data_sum <- rename(data_sum, c("mean" = varname))
+ return(data_sum)
+}
+
+library(tidyverse)
+barplot_candidate <- function(df, gene, scales=NULL){
+  tmp <- df[which(df$gene_name == gene),sizeFactor$sample]
+  tmp_cols <- df[which(df$gene_name == gene), c("exon_id_coords", "coords", "exon_id")]
+  tmp_cols <- tmp_cols[match(bedr.sort.region(tmp_cols$coords), tmp_cols$coords),]
+  tmp_cols$exon_id <- factor(tmp_cols$exon_id, levels = tmp_cols$exon_id)
+  samplesheet_tmp <- samplesheet[order(samplesheet$cell, samplesheet$condition, samplesheet$guide),]
+  samplesheet_tmp <- samplesheet_tmp[which(samplesheet_tmp$samples %in% colnames(tmp)),]
+  samplesheet_tmp <- samplesheet_tmp[which(samplesheet_tmp$guide %in% c("LacZ", "g1", "g3")),]
+  tmp$exon_id <- rownames(tmp)
+  tmp <- reshape2::melt(tmp)
+  tmp <- merge(tmp, samplesheet_tmp, by.x = "variable", by.y="samples")
+  tmp$exon_id <- factor(tmp$exon_id, levels = levels(tmp_cols$exon_id))
+
+  hips6_df_batch2 <- tmp %>% 
+    filter(cell == "hiPS6" & LV %in% c("LV3599", "LV3824") & seqnum == "CTG_JGJSeq205_207_208_214_truseq_2023_021")
+  hips6_df_batch2_stats <- data_summary(hips6_df_batch2, varname="value", groupnames=c("condition", "exon_id"))
+  
+  return(ggplot(hips6_df_batch2, aes(x=condition, y=value)) +
+           geom_bar(data = hips6_df_batch2_stats, aes(x=condition, y=value, fill=condition), stat="identity", alpha=0.7) + 
+           geom_errorbar(data = hips6_df_batch2_stats, aes(ymin=value-se, ymax=value+se), color="black", alpha=0.8, width=.2,position=position_dodge(0.05)) +
+           geom_jitter(color="black", alpha=0.7, height = 0, width = 0.1) +
+           stat_compare_means(comparisons = list(c("Control", "CRISPRi")), label = "p.format", method = "t.test", paired=T, tip.length = 0) +
+           scale_fill_manual(values = c("Control" = "lightgrey", "CRISPRi" = "#cba8cf")) + facet_wrap(.~exon_id, ncol=length(levels(tmp_cols$exon_id)), scales = scales) +
+           theme_bw() + labs(x="", y="Normalized expression", fill="") + ggtitle(paste("hiPS6:", gene)) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), plot.title = element_text(size = 12)))
+  
+}
+
+```
+
+## Write to file
+```{r}
+pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/boxplot_candidate_exon_elapor2.pdf", width= 24, height = 3)
+barplot_candidate(df = exon_counts_norm_candidates, gene="ELAPOR2") 
+barplot_candidate(df = exon_counts_norm_candidates, gene="ELAPOR2", scales = "free_y") 
+dev.off()
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/boxplot_candidate_exon_ppp1r1c.pdf", width= 10, height = 3)
+barplot_candidate(df = exon_counts_norm_candidates, gene="PPP1R1C") 
+barplot_candidate(df = exon_counts_norm_candidates, gene="PPP1R1C", scales = "free_y") 
+dev.off()
+```
+
+

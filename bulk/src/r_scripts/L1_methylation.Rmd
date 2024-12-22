@@ -1,0 +1,305 @@
+---
+title: "DNA methylation over L1s"
+output: html_notebook
+---
+
+# >6kbp L1HS-L1PA4 promoter methylation
+
+## Read data
+
+Format to have type (hiPS/organoid), cell line, coordinates from region in question, and chromosomes (1:22, X, Y)
+```{r}
+library(ggplot2)
+library(stringr)
+library(data.table)
+library(tidyverse)
+library(ggpubr)
+
+L1_promoter_methyl <- fread("/Volumes/MyPassport/CRISPRi_L1s/results/tables/FL_L1HS_PA4_promoter.MN10_WT_Rep1_ontDNA_iPSC_hiPS6_human_basecalls_5mC_5hmC_hg38.sorted.cohort.segmeth.mc10.mr1.segplot_data.csv", data.table = F)
+
+colnames(L1_promoter_methyl)[1] <- "position"
+L1_promoter_methyl$type <- ifelse(grepl("d15",L1_promoter_methyl$sample), "organoid", "hiPSC")
+L1_promoter_methyl$cell_line <- ifelse(grepl("hiPS48", L1_promoter_methyl$sample), "hiPS48",
+                                       ifelse(grepl("hiPS10", L1_promoter_methyl$sample), "hiPS10",
+                                              ifelse(grepl("hiPS6", L1_promoter_methyl$sample), "hiPS6", "other?")))
+L1_promoter_methyl$sample_name <- paste(L1_promoter_methyl$type, L1_promoter_methyl$cell_line, sep="_")
+L1_promoter_methyl$coords <- paste(sapply(str_split(L1_promoter_methyl$position, ":"), `[[`, 1), sapply(str_split(L1_promoter_methyl$position, ":"), `[[`, 2), sep=":")
+L1_promoter_methyl$chr <- sapply(str_split(L1_promoter_methyl$position, ":"), `[[`, 1)
+L1_promoter_methyl <- L1_promoter_methyl[which(L1_promoter_methyl$chr %in% c(paste("chr", 1:22, sep=""), "chrX", "chrY")), ]
+```
+
+## Visualize
+L1 promoter methylation violins per cell line in hiPSC state and day 15 cerebral organoids.
+```{r}
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/l1hs_l1pa2_l1pa3_l1pa4_promoter_methylation.pdf", height = 4)
+ggplot(L1_promoter_methyl, aes(x=cell_line, color=cell_line, y=modbase)) + geom_jitter(width = 0.2, height = 0, size=0.1) + 
+  geom_violin(alpha=0.5) +
+  geom_boxplot(width =0.2, alpha=0.5, outliers=F) +
+  theme_bw() + facet_wrap(.~type, scales = "free_x") + 
+  labs(x="", y="% methylation", color="Cell line") +
+  ggtitle(">6kbp L1HS-L1PA4 promoter methylation")
+# dev.off()
+```
+
+## L1 promoter methylation violins in hiPS6. 
+### Comparison between hiPSC and day 15 cerebral organoids.
+```{r}
+# Just the hiPS that we have organoids on
+L1_promoter_methyl <- L1_promoter_methyl[which(L1_promoter_methyl$cell_line != "hiPS10"),]
+
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/l1hs_l1pa2_l1pa3_l1pa4_split_promoter_methylation_hiPS6_vs_hiPS6_org.pdf", height = 5, width = 5)
+L1_promoter_methyl %>% 
+  filter(cell_line == "hiPS6") %>% 
+ggplot(aes(x=sample_name, y=modbase, color=sample_name)) + geom_jitter(width = 0.2, height = 0, size=0.1) + 
+  geom_violin(alpha=0.5) +
+  geom_boxplot(width =0.2, alpha=0.5, outliers=F) +
+  theme_bw() + 
+  facet_wrap(.~group, ncol=2) +
+  labs(x="", y="% methylation", color="Cell line") +
+  ggtitle(">6kbp L1HS-L1PA4 promoter methylation") + stat_compare_means(comparisons = list(c("hiPSC_hiPS6", "organoid_hiPS6"))) + theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_rect(colour = "lightgrey", fill=NA),
+          panel.background = element_blank(),
+          plot.title = element_text(face = "bold")) + scale_color_manual(values = c("hiPSC_hiPS6" = "#7ea3d6", 
+                                                                                    "organoid_hiPS6" = "#7cab72"))
+# dev.off()
+```
+
+### Comparison between hiPSC and day 15 cerebral organoids: Zoom-in.
+```{r}
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/l1hs_l1pa2_l1pa3_l1pa4_split_promoter_methylation_hiPS6_vs_hiPS6_org_zoom.pdf", height = 5, width = 5)
+L1_promoter_methyl %>% 
+  filter(cell_line == "hiPS6") %>% 
+ggplot(aes(x=sample_name, y=modbase, color=sample_name)) + geom_jitter(width = 0.2, height = 0, size=0.1) + 
+  theme_bw() + 
+  facet_wrap(.~group, ncol=2) +
+  labs(x="", y="% methylation", color="Cell line") +
+  ggtitle(">6kbp L1HS-L1PA4 promoter methylation") + stat_compare_means(comparisons = list(c("hiPSC_hiPS6", "organoid_hiPS6"))) + theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_rect(colour = "lightgrey", fill=NA),
+          panel.background = element_blank(),
+          plot.title = element_text(face = "bold")) + scale_color_manual(values = c("hiPSC_hiPS6" = "#7ea3d6", 
+                                                                                    "organoid_hiPS6" = "#7cab72")) +
+  stat_summary(fun.y=mean,col='red',geom='point') +
+  coord_cartesian(ylim = c(0.65,0.95)) + # Here is the zoom in
+    theme(text = element_text(size = 20), title = element_text(size=15)) 
+# dev.off()
+```
+
+## DNA methylation status over L1 promoters marked with H3K4me3
+```{r}
+# Set order of violins
+L1_promoter_methyl$cell_line <- factor(L1_promoter_methyl$cell_line, levels = c("hiPS6", "hiPS48"))
+L1_h3k4me3_peak <- fread("/Volumes/MyPassport/CRISPRi_L1s/results/tables/H3K4me3_tagdir_regions_merged_hiPS6_hiPS48_intersect_FL_L1PA_promoters.bed", skip=1, header = F)
+L1_h3k4me3_peak$coords <- paste(L1_h3k4me3_peak$V1, paste(L1_h3k4me3_peak$V2, L1_h3k4me3_peak$V3, sep="-"), sep=":")
+
+L1_promoter_methyl$h3k4me3_peak <- ifelse(L1_promoter_methyl$coords %in% L1_h3k4me3_peak$coords, "H3K4me3+ ", "")
+L1_promoter_methyl$h3k4me3_peak_cell_line <- paste(L1_promoter_methyl$h3k4me3_peak, L1_promoter_methyl$cell_line, sep="")
+L1_promoter_methyl$h3k4me3_peak_cell_line <- factor(L1_promoter_methyl$h3k4me3_peak_cell_line, levels = c("hiPS6", "H3K4me3+ hiPS6", "hiPS48", "H3K4me3+ hiPS48"))
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/l1hs_l1pa2_l1pa3_l1pa4_split_promoter_methylation_hiPS6_hiPS48.pdf", height = 4, width = 10)
+ggplot(L1_promoter_methyl[which(L1_promoter_methyl$type == "hiPSC"),], aes(x=h3k4me3_peak_cell_line, color=h3k4me3_peak_cell_line, y=modbase)) + geom_jitter(width = 0.2, height = 0, size=0.1) + 
+  geom_violin(alpha=0.5) +
+  geom_boxplot(width =0.2, alpha=0.5, outliers=F) +
+  theme_bw() + 
+  facet_wrap(.~group, ncol=4) +
+  labs(x="", y="% methylation", color="Cell line") +
+  ggtitle(">6kbp L1HS-L1PA4 promoter methylation") + theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_rect(colour = "lightgrey", fill=NA),
+          panel.background = element_blank(),
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+          plot.title = element_text(face = "bold")) + scale_color_manual(values = c("hiPS6" = "#7ea3d6", 
+                                                                                    "hiPS48" = "#86bbcc",
+                                                                                    "H3K4me3+ hiPS6" = "#7ea3d6", 
+                                                                                    "H3K4me3+ hiPS48"= "#86bbcc"))
+# dev.off()
+```
+
+## DNA methylation correlation with L1 transcription
+
+```{r}
+# Load TE normalized counts
+load("/Volumes/MyPassport/CRISPRi_L1s/bulk/src/r_scripts/TE_uniq_DEA.RData")
+
+# Subset to only include >6kbp L1HS-L1PA4
+FL_L1PA_bed <- te_counts[rownames(FL_L1PA_norm), c("Chr", "Start", "End", "Strand", "Geneid")]
+FL_L1PA_bed <- FL_L1PA_bed[which(grepl("L1HS|L1PA2|L1PA3|L1PA4", FL_L1PA_bed$Geneid)), ]
+FL_L1PA_bed$tmp_start <- ifelse(FL_L1PA_bed$Strand == "+", FL_L1PA_bed$Start, FL_L1PA_bed$End - 900)
+FL_L1PA_bed$tmp_end <- ifelse(FL_L1PA_bed$Strand == "+", FL_L1PA_bed$Start + 900, FL_L1PA_bed$End)
+FL_L1PA_bed$coords <- paste(FL_L1PA_bed$Chr, paste(FL_L1PA_bed$tmp_start, FL_L1PA_bed$tmp_end, sep = "-"), sep=":")
+FL_L1PA_bed <- FL_L1PA_bed[which(FL_L1PA_bed$Chr %in% c(paste("chr", 1:22, sep=""), "chrX", "chrY")), ]
+# These are the normalized counts
+FL_L1PA_norm$TE_id <- rownames(FL_L1PA_norm)
+
+library(ggpmisc)
+#### hiPS6 ####
+hiPS6_samples <- samplesheet[which(startsWith(samplesheet$samples, "DA") & grepl("h6", samplesheet$samples)),"samples"]
+# Coordinates of elements which we have the methylation data on
+FL_L1PA_coord_methyl <- FL_L1PA_bed[which(FL_L1PA_bed$coords %in% L1_promoter_methyl$coords),"Geneid"]
+# Subset the normalized counts for hiPS6
+FL_L1PA_norm_found_ont_hiPS6 <- FL_L1PA_norm[FL_L1PA_coord_methyl, c(hiPS6_samples, "TE_id")]
+# Melt to reformat the data frame
+FL_L1PA_norm_found_ont_hiPS6_melt <- reshape2::melt(FL_L1PA_norm_found_ont_hiPS6)
+# Get the coordinates of these elements
+FL_L1PA_norm_found_ont_hiPS6_melt <- merge(FL_L1PA_norm_found_ont_hiPS6_melt, FL_L1PA_bed[,c("Geneid", "coords")], by.x = "TE_id", by.y = "Geneid")
+# Merge with the methylation data of hiPS6
+L1_promoter_methyl_hiPS6 <- L1_promoter_methyl[which(L1_promoter_methyl$type == "hiPSC" & L1_promoter_methyl$cell_line == "hiPS6"), c("coords", "modbase")]
+FL_L1PA_norm_found_ont_hiPS6_melt <- merge(FL_L1PA_norm_found_ont_hiPS6_melt, L1_promoter_methyl_hiPS6)
+
+#### hiPS48 ####
+hiPS48_samples <- c(samplesheet[which(startsWith(samplesheet$samples, "DA") & grepl("h48", samplesheet$samples)),"samples"], "TE_id")
+FL_L1PA_norm_found_ont_hiPS48 <- FL_L1PA_norm[FL_L1PA_coord_methyl, hiPS48_samples]
+FL_L1PA_norm_found_ont_hiPS48_melt <- reshape2::melt(FL_L1PA_norm_found_ont_hiPS48)
+FL_L1PA_norm_found_ont_hiPS48_melt <- merge(FL_L1PA_norm_found_ont_hiPS48_melt, FL_L1PA_bed[,c("Geneid", "coords")], by.x = "TE_id", by.y = "Geneid")
+L1_promoter_methyl_hiPS48 <- L1_promoter_methyl[which(L1_promoter_methyl$type == "hiPSC" & L1_promoter_methyl$cell_line == "hiPS48"), c("coords", "modbase")]
+FL_L1PA_norm_found_ont_hiPS48_melt <- merge(FL_L1PA_norm_found_ont_hiPS48_melt, L1_promoter_methyl_hiPS48)
+
+# Create a column with TE subfamily name
+FL_L1PA_norm_found_ont_hiPS6_melt$TE_subfamily <- sapply(str_split(FL_L1PA_norm_found_ont_hiPS6_melt$TE_id, "_dup"), `[[`, 1)
+FL_L1PA_norm_found_ont_hiPS48_melt$TE_subfamily <- sapply(str_split(FL_L1PA_norm_found_ont_hiPS48_melt$TE_id, "_dup"), `[[`, 1)
+
+# Finally visualize
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/corr_methylation_expression_hiPS.pdf")
+ggplot(FL_L1PA_norm_found_ont_hiPS6_melt, aes(x=log2(value+1), y=modbase)) + geom_point(size=0.3, alpha = 0.5, color = "#7da2d5") + 
+  theme_bw() + 
+  # geom_smooth(method = "lm", formula= y~x) + 
+  stat_poly_line(color = "black", size=0.5) +
+  stat_poly_eq(use_label(c("adj.R2", "p"))) +
+  facet_wrap(variable~TE_subfamily, ncol=4) + labs(x="log2(Normalized Expression + 1)", y="% Methylation") + ggtitle("hiPS6 >6kbp L1HS-PA4 methylation vs expression") +
+  theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_rect(colour = "lightgrey", fill=NA),
+          panel.background = element_blank(),
+          plot.title = element_text(face = "bold"))
+
+ggplot(FL_L1PA_norm_found_ont_hiPS48_melt, aes(x=log2(value+1), y=modbase)) + geom_point(size=0.3, alpha = 0.5, color = "#7da2d5") + 
+  theme_bw() + 
+  # geom_smooth(method = "lm", formula= y~x) + 
+  stat_poly_line(color = "black", size=0.5) +
+  stat_poly_eq(use_label(c("adj.R2", "p"))) +
+  facet_wrap(variable~TE_subfamily, ncol=4) + labs(x="log2(Normalized Expression + 1)", y="% Methylation") + ggtitle("hiPS48 >6kbp L1HS-PA4 methylation vs expression") +
+  theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_rect(colour = "lightgrey", fill=NA),
+          panel.background = element_blank(),
+          plot.title = element_text(face = "bold"))
+# dev.off()
+
+```
+
+## Elements only found to be expressed in hiPS
+```{r}
+L1_promoter_methyl_hips_only <- fread("/Volumes/MyPassport/CRISPRi_L1s/results/tables/FL_L1PA_WT_hiPSC_only_expressed_promoter.MN10_WT_Rep1_ontDNA_iPSC_hiPS6_human_basecalls_5mC_5hmC_hg38.sorted.cohort.segmeth.tsv", data.table = F)
+
+colnames(L1_promoter_methyl_hips_only)[1] <- "position"
+L1_promoter_methyl_hips_only <- L1_promoter_methyl_hips_only[,c(1:6, which(grepl("m_methfrac", colnames(L1_promoter_methyl_hips_only))))]
+
+# Add information on cell line and type of sample (hiPS/org)
+L1_promoter_methyl_hips_only_melt <- reshape2::melt(L1_promoter_methyl_hips_only[,c(7:ncol(L1_promoter_methyl_hips_only), 1)])
+L1_promoter_methyl_hips_only_melt$type <- ifelse(grepl("hiPS48", L1_promoter_methyl_hips_only_melt$variable), "hiPS48",
+                                                 ifelse(grepl("hiPS6", L1_promoter_methyl_hips_only_melt$variable), 
+                                                        ifelse(grepl("org_hiPS6", L1_promoter_methyl_hips_only_melt$variable), "hiPS6 org", "hiPS6"), "other?"))
+
+library(ggpubr)
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/l1pa_promoter_methylation_expressed_hiPS_only.pdf", height = 6, width = 5)
+ggplot(L1_promoter_methyl_hips_only_melt[which(L1_promoter_methyl_hips_only_melt$type != "hiPS48"),], aes(x=type, y=value, fill=type)) + geom_jitter(aes(color=type),alpha=0.2, height = 0, width = 0.2) + geom_violin(alpha=0.3) + geom_boxplot(width=0.2, outliers = F) + theme_bw() + labs(y="% methylation", x="", fill="", color="") + scale_fill_manual(values = c("#56a5b2", "#87c872")) + scale_color_manual(values= c("#56a5b2", "#87c872")) + stat_compare_means(comparisons = list(c("hiPS6", "hiPS6 org")), label.y = 1) + ggtitle(">6kbp L1PAs only\nexpressed in hiPS") + lims(y=c(0.2,1.05)) + theme(text = element_text(size = 20))
+# dev.off()
+```
+
+## Methylation of elements found to be expressed in both hiPS and organoids
+
+Here we compare the three groups (expressed only in hiPS, only in organoids, and in both)
+```{r}
+L1_promoter_methyl_org_hips <- fread("/Volumes/MyPassport/CRISPRi_L1s/results/tables/FL_L1PA_LacZ_org_WT_hiPSC_expressed_promoter.MN10_WT_Rep1_ontDNA_iPSC_hiPS6_human_basecalls_5mC_5hmC_hg38.sorted.cohort.segmeth.tsv", data.table = F)
+
+colnames(L1_promoter_methyl_org_hips)[1] <- "position"
+L1_promoter_methyl_org_hips <- L1_promoter_methyl_org_hips[,c(1:6, which(grepl("m_methfrac", colnames(L1_promoter_methyl_org_hips))))]
+
+# Last time, add info
+L1_promoter_methyl_org_hips_melt <- reshape2::melt(L1_promoter_methyl_org_hips[,c(7:ncol(L1_promoter_methyl_org_hips), 1)])
+L1_promoter_methyl_org_hips_melt$type <- ifelse(grepl("hiPS48", L1_promoter_methyl_org_hips_melt$variable), "hiPS48",
+                                                 ifelse(grepl("hiPS6", L1_promoter_methyl_org_hips_melt$variable), 
+                                                        ifelse(grepl("org_hiPS6", L1_promoter_methyl_org_hips_melt$variable), "hiPS6 org", "hiPS6"), "other?"))
+
+# Add column per data frame with the group of elements they belong to
+L1_promoter_methyl_hips_only_melt$expressed <- "hiPS_only"
+L1_promoter_methyl_org_hips_melt$expressed <- "hiPS_org"
+
+# Bind them
+L1_promoter_methyl_melt <- rbind(L1_promoter_methyl_hips_only_melt,
+                                 L1_promoter_methyl_org_hips_melt)
+
+L1_promoter_methyl_melt$type_expressed <- paste(L1_promoter_methyl_melt$type, L1_promoter_methyl_melt$expressed, sep="_")
+
+# Compare all conditions
+combinations <- combn(unique(L1_promoter_methyl_melt[which(L1_promoter_methyl_melt$type != "hiPS48"),"type_expressed"]), 2)
+# Set the order right
+L1_promoter_methyl_melt$expressed <- factor(L1_promoter_methyl_melt$expressed, levels = c("hiPS_org", "hiPS_only"))
+
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/l1pa_promoter_methylation_expressed_venn.pdf", height = 5, width = 6)
+L1_promoter_methyl_melt[which(L1_promoter_methyl_melt$type != "hiPS48"),] %>% # Only hiPS6
+  drop_na() %>% 
+ggplot(aes(x=expressed, y=value, fill=expressed)) + geom_point(aes(color=expressed), alpha=0.2, pch = 21, position = position_jitterdodge(dodge.width = 0.9, jitter.height = 0, jitter.width = 0.1)) + geom_violin(alpha=0.3) + geom_boxplot(width=0.2, outliers = F, position = position_dodge(width = 0.9)) + theme_bw() + 
+  labs(y="% methylation", x="", fill="", color="") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + facet_wrap(.~type) +
+  scale_fill_manual(values = c("#5bd641", "#32b2a5", "#2c8cdb")) +
+  scale_color_manual(values= c("#aad3a2", "#87b3b0", "#b0c7dd")) +
+  ggtitle(">6kbp L1PAs") + 
+    theme(text = element_text(size = 20)) 
+# dev.off()
+
+```
+
+
+## Zoom in to the differences between the groups
+```{r}
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/l1pa_promoter_methylation_expressed_venn_pvals_zoom.pdf", height = 3, width = 5)
+L1_promoter_methyl_melt[which(L1_promoter_methyl_melt$type == "hiPS6 org"),] %>% # Only organoids
+  drop_na() %>% 
+ggplot(aes(x=expressed, y=value, fill=expressed)) + geom_point(aes(color=expressed), alpha=0.2, pch = 21, position = position_jitterdodge(dodge.width = 0.9, jitter.height = 0, jitter.width = 0.7)) + theme_bw() + 
+  stat_summary(fun.y=mean,col='red',geom='point') +
+   stat_summary(geom = "line", fun = mean, group = 1, linetype="dashed") +
+labs(y="% methylation", x="", fill="", color="") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_fill_manual(values = c("#5bd641", "#32b2a5", "#2c8cdb")) +
+  scale_color_manual(values= c("#aad3a2", "#87b3b0", "#b0c7dd")) +
+  ggtitle(">6kbp L1PAs: Organoids hiPS6") + 
+  coord_cartesian(ylim = c(0.85,1)) + # Here is the zoom in
+    theme(text = element_text(size = 20), title = element_text(size=15)) 
+
+
+L1_promoter_methyl_melt[which(L1_promoter_methyl_melt$type == "hiPS6"),] %>% # Only in hiPS6
+  drop_na() %>% 
+ggplot(aes(x=expressed, y=value, fill=expressed)) + geom_point(aes(color=expressed), alpha=0.2, pch = 21, position = position_jitterdodge(dodge.width = 0.9, jitter.height = 0, jitter.width = 0.7)) + theme_bw() + 
+  stat_summary(fun.y=mean,col='red',geom='point') +
+   stat_summary(geom = "line", fun = mean, group = 1, linetype="dashed") +
+labs(y="% methylation", x="", fill="", color="") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_fill_manual(values = c("#5bd641", "#32b2a5", "#2c8cdb")) +
+  scale_color_manual(values= c("#aad3a2", "#87b3b0", "#b0c7dd")) +
+  ggtitle(">6kbp L1PAs: hiPS6") + 
+  coord_cartesian(ylim = c(0.70,1)) + # Zoom in
+    theme(text = element_text(size = 20), title = element_text(size=15)) 
+# dev.off()
+```
+
+
+```{r}
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/l1pa_promoter_methylation_expressed_venn_pvals_wilcox_hiPS_only_both.pdf", height = 5, width = 5)
+L1_promoter_methyl_melt[which(L1_promoter_methyl_melt$type == "hiPS6 org"),] %>% # Organoid samples
+  drop_na() %>% 
+ggplot(aes(x=expressed, y=value, fill=expressed)) + geom_point(aes(color=expressed), alpha=0.2, pch = 21, position = position_jitterdodge(dodge.width = 0.9, jitter.height = 0, jitter.width = 0.1)) + geom_violin(alpha=0.3) + geom_boxplot(width=0.2, outliers = F, position = position_dodge(width = 0.9)) + theme_bw() + 
+  labs(y="% methylation", x="", fill="", color="") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_fill_manual(values = c("#32b2a5", "#2c8cdb")) +
+  scale_color_manual(values= c("#87b3b0", "#b0c7dd")) +
+  ggtitle(">6kbp L1PAs: Organoids hiPS6") + 
+    theme(text = element_text(size = 20), title = element_text(size=15)) + stat_compare_means()
+
+L1_promoter_methyl_melt[which(L1_promoter_methyl_melt$type == "hiPS6"),] %>% # hiPS samples
+  drop_na() %>% 
+ggplot(aes(x=expressed, y=value, fill=expressed)) + geom_point(aes(color=expressed), alpha=0.2, pch = 21, position = position_jitterdodge(dodge.width = 0.9, jitter.height = 0, jitter.width = 0.1)) + geom_violin(alpha=0.3) + geom_boxplot(width=0.2, outliers = F, position = position_dodge(width = 0.9)) + theme_bw() + 
+  labs(y="% methylation", x="", fill="", color="") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_fill_manual(values = c("#32b2a5", "#2c8cdb")) +
+  scale_color_manual(values= c("#87b3b0", "#b0c7dd")) +
+  ggtitle(">6kbp L1PAs: hiPS6") + 
+    theme(text = element_text(size = 20), title = element_text(size=15)) + stat_compare_means()
+# dev.off()
+```
+
