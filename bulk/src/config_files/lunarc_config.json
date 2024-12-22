@@ -1,0 +1,398 @@
+{
+  "__default__" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "00:15:00",
+      "nodes" : 1,
+      "partition" : "sens",
+      "tasks-per-node" : 10,
+      "output" : "%j.out",
+      "error" : "%j.err",
+      "job-name" : "%j"
+  },
+  "uniquemapping" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "05:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 20,
+      "partition" : "sens",
+      "output" : "%j.map.out",
+      "error" : "%j.map.err",
+      "job-name" : "%j.map"
+  },
+  "multimapping" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "05:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 20,
+      "partition" : "sens",
+      "output" : "%j.map.out",
+      "error" : "%j.map.err",
+      "job-name" : "%j.map"
+  },
+  "indexing" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "01:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 1,
+      "partition" : "sens",
+      "output" : "%j.index.out",
+      "error" : "%j.index.err",
+      "job-name" : "%j.index"
+  },
+  "bigwig" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "30:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 5,
+      "partition" : "sens",
+      "output" : "%j.bigwig.out",
+      "error" : "%j.bigwig.err",
+      "job-name" : "%j.bigwig"
+  },
+ "gene_quantification" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "10:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 20,
+      "partition" : "sens",
+      "output" : "%j.gene_quant.out",
+      "error" : "%j.gene_quant.err",
+      "job-name" : "%j.gene_quant"
+  },
+  "exon_quantification" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "10:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 5,
+      "partition" : "sens",
+      "output" : "%j.exon_quant.out",
+      "error" : "%j.exon_quant.err",
+      "job-name" : "%j.exon_quant"
+  },
+  "matrix_offtarget_crispri_RNAseq" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "10:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 1,
+      "partition" : "sens",
+      "output" : "%j.matrix_offtarget_crispri.out",
+      "error" : "%j.matrix_offtarget_crispri.err",
+      "job-name" : "%j.matrix_offtarget_crispri"
+  },
+  "matrix_housekeeping" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "10:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 1,
+      "partition" : "sens",
+      "output" : "%j.matrix_housekeeping.out",
+      "error" : "%j.matrix_housekeeping.err",
+      "job-name" : "%j.matrix_housekeeping"
+  },
+  "matrix_FL_L1PAs_WT_hiPSC_RNAseq" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "10:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 10,
+      "partition" : "sens",
+      "output" : "%j.matrix_FL_L1PAs.out",
+      "error" : "%j.matrix_FL_L1PAs.err",
+      "job-name" : "%j.matrix_FL_L1PAs"
+  },
+  "matrix_FL_L1PAs_hiPSC_WT_H3K4me3_cutnrun" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "10:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 10,
+      "partition" : "sens",
+      "output" : "%j.matrix_FL_L1PAs.out",
+      "error" : "%j.matrix_FL_L1PAs.err",
+      "job-name" : "%j.matrix_FL_L1PAs"
+  },
+  "matrix_FL_L1PAs_hiPSC_WT_cutnrun" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "10:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 10,
+      "partition" : "sens",
+      "output" : "%j.matrix_FL_L1PAs.out",
+      "error" : "%j.matrix_FL_L1PAs.err",
+      "job-name" : "%j.matrix_FL_L1PAs"
+  },
+ "matrix_FL_L1PAs_WT_hiPSC_extra_ESC_RNAseq" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "10:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 10,
+      "partition" : "sens",
+      "output" : "%j.matrix_FL_L1PAs.out",
+      "error" : "%j.matrix_FL_L1PAs.err",
+      "job-name" : "%j.matrix_FL_L1PAs"
+  },
+ "matrix_FL_L1PAs_WT_hiPSC_pantro6" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "10:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 5,
+      "partition" : "sens",
+      "output" : "%j.matrix_FL_L1PAs.out",
+      "error" : "%j.matrix_FL_L1PAs.err",
+      "job-name" : "%j.matrix_FL_L1PAs"
+  },
+ "matrix_FL_L1PAs_hiPSC_crispri_dCas9" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "10:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 10,
+      "partition" : "sens",
+      "output" : "%j.matrix_FL_L1PAs.out",
+      "error" : "%j.matrix_FL_L1PAs.err",
+      "job-name" : "%j.matrix_FL_L1PAs"
+  },
+  "TE_quantification" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "10:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 20,
+      "partition" : "sens",
+      "output" : "%j.TEcount.out",
+      "error" : "%j.TEcount.err",
+      "job-name" : "%j.TEcount"
+  },
+  "TEcounts" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "20:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 20,
+      "partition" : "sens",
+      "output" : "%j.TEcount.out",
+      "error" : "%j.TEcount.err",
+      "job-name" : "%j.TEcount"
+  },
+  "matrix_FL_L1PAs_org" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "15:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 20,
+      "partition" : "sens",
+      "output" : "%j.matrix_FL_L1PAs_org.out",
+      "error" : "%j.matrix_FL_L1PAs_org.err",
+      "job-name" : "%j.matrix_FL_L1PAs_org"
+  },
+  "split_bam_strand":
+  {
+      "account" : "csens2024-3-2",
+      "time" : "05:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 5,
+      "partition" : "sens",
+      "output" : "%j.split_bam_strand.out",
+      "error" : "%j.split_bam_strand.err",
+      "job-name" : "%j.split_bam_strand"
+  },
+  "TE_quantification_strand" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "05:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 20,
+      "partition" : "sens",
+      "output" : "%j.TE_quantification.out",
+      "error" : "%j.TE_quantification.err",
+      "job-name" : "%j.TE_quantification"
+  },
+  "matrix_FL_L1PAs_crispri_hiPSC_RNAseq" : 
+  {
+      "account" : "csens2024-3-2",
+      "time" : "10:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 1,
+      "partition" : "sens",
+      "output" : "%j.matrix_FL_L1PAs.out",
+      "error" : "%j.matrix_FL_L1PAs.err",
+      "job-name" : "%j.matrix_FL_L1PAs"
+  },
+  "matrix_FL_L1PAs_org_crispri_RNAseq" : 
+  {
+      "account" : "csens2024-3-2",
+      "time" : "10:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 1,
+      "partition" : "sens",
+      "output" : "%j.matrix_FL_L1PAs.out",
+      "error" : "%j.matrix_FL_L1PAs.err",
+      "job-name" : "%j.matrix_FL_L1PAs"
+  },
+  "matrix_FL_L1PAs_WT_org_hiPSC_RNAseq" : 
+  {
+      "account" : "csens2024-3-2",
+      "time" : "10:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 1,
+      "partition" : "sens",
+      "output" : "%j.matrix_FL_L1PAs.out",
+      "error" : "%j.matrix_FL_L1PAs.err",
+      "job-name" : "%j.matrix_FL_L1PAs"
+  },
+ "matrix_FL_L1PAs_WT_hiPSC" : 
+  {
+      "account" : "csens2024-3-2",
+      "time" : "10:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 1,
+      "partition" : "sens",
+      "output" : "%j.matrix_FL_L1PAs.out",
+      "error" : "%j.matrix_FL_L1PAs.err",
+      "job-name" : "%j.matrix_FL_L1PAs"
+  },
+  "matrix_FL_L1PAs_venn_RNAseq" : 
+  {
+      "account" : "csens2024-3-2",
+      "time" : "10:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 1,
+      "partition" : "sens",
+      "output" : "%j.matrix_FL_L1PAs.out",
+      "error" : "%j.matrix_FL_L1PAs.err",
+      "job-name" : "%j.matrix_FL_L1PAs"
+  },
+  "matrix_cutnrun_controls" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "10:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 1,
+      "partition" : "sens",
+      "output" : "%j.matrix_cutnrun_controls.out",
+      "error" : "%j.matrix_cutnrun_controls.err",
+      "job-name" : "%j.matrix_cutnrun_controls"
+  },
+  "matrix_offtarget_crispri_h3k4me3" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "10:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 1,
+      "partition" : "sens",
+      "output" : "%j.matrix_offtarget_crispri_h3k4me3.out",
+      "error" : "%j.matrix_offtarget_crispri_h3k4me3.err",
+      "job-name" : "%j.matrix_offtarget_crispri_h3k4me3"
+  },
+  "matrix_FL_L1PAs_hiPSC_crispri_cutnrun" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "10:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 1,
+      "partition" : "sens",
+      "output" : "%j.matrix_FL_L1PAs_hiPSC_crispri_cutnrun.out",
+      "error" : "%j.matrix_FL_L1PAs_hiPSC_crispri_cutnrun.err",
+      "job-name" : "%j.matrix_FL_L1PAs_hiPSC_crispri_cutnrun"
+  },
+  "make_tag_directory" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "15:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 20,
+      "partition" : "sens",
+      "output" : "%j.make_tag_directory.out",
+      "error" : "%j.make_tag_directory.err",
+      "job-name" : "%j.make_tag_directory"
+  },
+  "peak_calling_dCas9" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "05:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 20,
+      "partition" : "sens",
+      "output" : "%j.peak_calling.out",
+      "error" : "%j.peak_calling.err",
+      "job-name" : "%j.peak_calling"
+  },
+  "peak_calling_histone" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "05:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 20,
+      "partition" : "sens",
+      "output" : "%j.peak_calling.out",
+      "error" : "%j.peak_calling.err",
+      "job-name" : "%j.peak_calling"
+  },
+  "mapping" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "35:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 20,
+      "partition" : "sens",
+      "output" : "%j.map.out",
+      "error" : "%j.map.err",
+      "job-name" : "%j.map"
+  },
+  "sort" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "03:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 10,
+      "partition" : "sens",
+      "output" : "%j.sort.out",
+      "error" : "%j.sort.err",
+      "job-name" : "%j.sort"
+  },
+  "sam_to_bam" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "03:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 10,
+      "partition" : "sens",
+      "output" : "%j.sam_to_bam.out",
+      "error" : "%j.sam_to_bam.err",
+      "job-name" : "%j.sam_to_bam"
+  },
+  "indexing" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "03:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 10,
+      "partition" : "sens",
+      "output" : "%j.index.out",
+      "error" : "%j.index.err",
+      "job-name" : "%j.index"
+  },
+  "bigwig" :
+  {
+      "account" : "csens2024-3-2",
+      "time" : "10:00:00",
+      "nodes" : 1,
+      "tasks-per-node" : 20,
+      "partition" : "sens",
+      "output" : "%j.bigwig.out",
+      "error" : "%j.bigwig.err",
+      "job-name" : "%j.bigwig"
+  }
+}

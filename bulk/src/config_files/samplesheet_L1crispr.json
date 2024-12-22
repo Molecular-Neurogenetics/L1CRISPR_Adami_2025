@@ -1,0 +1,306 @@
+{
+	"samples":
+	{
+		"AA13_Sai2_lv3775_C_CRISPRa_S12" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA9_Sai2_lv3775_A_CRISPRa_S10" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA21_Sai2_lv3790_A_ctrl_S16" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA23_Sai2_lv3790_B_ctrl_S17" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA25_Sai2_lv3790_C_ctrl_S18" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA27_Sai2_lv3789_A_ctrl_S19" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA28_Sai2_lv3789_B_ctrl_S20" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA29_Sai2_lv3789_C_ctrl_S21" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA30_h6_lv3822_1_CRISPRi_S7" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA32_h6_lv3822_2_CRISPRi_S8" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA34_h6_lv3822_3_CRISPRi_S9" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA138_hiPS6_lv3823_a_L1_CRISPRi_S21" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA139_hiPS6_lv3823_b_L1_CRISPRi_S22" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA140_hiPS6_lv3823_c_L1_CRISPRi_S23" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA141_hiPS6_lv3824_a_L1_CRISPRi_S24" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA142_hiPS6_lv3824_b_L1_CRISPRi_S25" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA143_hiPS6_lv3824_c_L1_CRISPRi_S26" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA42_h6_lv3599_1_ctrl_S1" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA44_h6_lv3599_2_ctrl_S2" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA46_h6_lv3599_3_ctrl_S3" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA135_hiPS6_lv3599_a_L1_LacZ_S18" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA136_hiPS6_lv3599_b_L1_LacZ_S19" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA137_hiPS6_lv3599_c_L1_LacZ_S20" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA146_hiPS48_lv3824_a_L1_CRISPRi_S29" : "/projects/fs3/jakobssonlab/testdata_ctg_2023_50/ctg_2023_050/FastQFiles",
+		"AA147_hiPS48_lv3824_b_L1_CRISPRi_S30" : "/projects/fs3/jakobssonlab/testdata_ctg_2023_50/ctg_2023_050/FastQFiles",
+		"AA148_hiPS48_lv3824_c_L1_CRISPRi_S31" : "/projects/fs3/jakobssonlab/testdata_ctg_2023_50/ctg_2023_050/FastQFiles",
+		"AA149_hiPS48_lv3599_a_L1_LacZ_S32" : "/projects/fs3/jakobssonlab/testdata_ctg_2023_50/ctg_2023_050/FastQFiles",
+		"AA150_hiPS48_lv3599_b_L1_LacZ_S33" : "/projects/fs3/jakobssonlab/testdata_ctg_2023_50/ctg_2023_050/FastQFiles",
+		"AA151_hiPS48_lv3599_c_L1_LacZ_S34" : "/projects/fs3/jakobssonlab/testdata_ctg_2023_50/ctg_2023_050/FastQFiles",
+		"AA_h48_CRISPRi_LacZ_LV3599_d15_organoids_a" :	"/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX/2023_282/Data/concatenated_fastq",
+		"AA_h48_CRISPRi_LacZ_LV3599_d15_organoids_b" :	"/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX/2023_282/Data/concatenated_fastq",
+		"AA_h48_CRISPRi_LacZ_LV3599_d15_organoids_c" :	"/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX/2023_282/Data/concatenated_fastq",
+		"AA_h48_L1_CRISPRi_g3_LV3824_d15_organoids_a" :	"/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX/2023_282/Data/concatenated_fastq",
+		"AA_h48_L1_CRISPRi_g3_LV3824_d15_organoids_b" :	"/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX/2023_282/Data/concatenated_fastq",
+		"AA_h48_L1_CRISPRi_g3_LV3824_d15_organoids_c" :	"/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX/2023_282/Data/concatenated_fastq",
+		"L1_CRISPRi_LV3824_d15_organoids_a_S15" : "/home/raquelgg/ls2_fs1/raquelgg_fs1_jakobssonlab/CTG_JGJSeq233_237_250_257_2023_145/230706_A00681_0891_AHGKYTDRX3/Data/Intensities/BaseCalls",
+		"L1_CRISPRi_LV3824_d15_organoids_b_S16" : "/home/raquelgg/ls2_fs1/raquelgg_fs1_jakobssonlab/CTG_JGJSeq233_237_250_257_2023_145/230706_A00681_0891_AHGKYTDRX3/Data/Intensities/BaseCalls",
+		"L1_CRISPRi_LV3824_d15_organoids_c_S17" : "/home/raquelgg/ls2_fs1/raquelgg_fs1_jakobssonlab/CTG_JGJSeq233_237_250_257_2023_145/230706_A00681_0891_AHGKYTDRX3/Data/Intensities/BaseCalls",
+		"L1_CRISPRi_LacZ_LV3599_d15_organoids_a_S18" : "/home/raquelgg/ls2_fs1/raquelgg_fs1_jakobssonlab/CTG_JGJSeq233_237_250_257_2023_145/230706_A00681_0891_AHGKYTDRX3/Data/Intensities/BaseCalls",
+		"L1_CRISPRi_LacZ_LV3599_d15_organoids_b_S19" : "/home/raquelgg/ls2_fs1/raquelgg_fs1_jakobssonlab/CTG_JGJSeq233_237_250_257_2023_145/230706_A00681_0891_AHGKYTDRX3/Data/Intensities/BaseCalls",
+		"L1_CRISPRi_LacZ_LV3599_d15_organoids_c_S20" : "/home/raquelgg/ls2_fs1/raquelgg_fs1_jakobssonlab/CTG_JGJSeq233_237_250_257_2023_145/230706_A00681_0891_AHGKYTDRX3/Data/Intensities/BaseCalls",
+		"MN07_gRNA1_Rep1_bulkRNA_org_hiPS6_LV3822_L1_CRISPRi_d15_batch2_S36" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_gRNA1_Rep2_bulkRNA_org_hiPS6_LV3822_L1_CRISPRi_d15_batch2_S37" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_gRNA1_Rep3_bulkRNA_org_hiPS6_LV3822_L1_CRISPRi_d15_batch2_S38" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_gRNA2_Rep1_bulkRNA_org_hiPS6_LV3823_L1_CRISPRi_d15_batch2_S39" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_gRNA2_Rep2_bulkRNA_org_hiPS6_LV3823_L1_CRISPRi_d15_batch2_S40" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_gRNA2_Rep3_bulkRNA_org_hiPS6_LV3823_L1_CRISPRi_d15_batch2_S29" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_gRNA3_Rep1_bulkRNA_org_hiPS6_LV3824_L1_CRISPRi_d15_batch2_S30" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_gRNA3_Rep2_bulkRNA_org_hiPS6_LV3824_L1_CRISPRi_d15_batch2_S31" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_gRNA3_Rep3_bulkRNA_org_hiPS6_LV3824_L1_CRISPRi_d15_batch2_S32" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_LacZ_Rep1_bulkRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch2_S33" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_LacZ_Rep2_bulkRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch2_S34" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_LacZ_Rep3_bulkRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch2_S35" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"DA246_hIPSC_h6_S54" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs5_jakobssonlab/CTG_Seq107_111_112/210330_A00681_0333_BH5K7WDRXY/Data/Intensities/BaseCalls/Diahann_RNaseq/54_seq112",
+		"DA272_hIPSC_h6_S55" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs5_jakobssonlab/CTG_Seq107_111_112/210330_A00681_0333_BH5K7WDRXY/Data/Intensities/BaseCalls/Diahann_RNaseq/55_seq112",
+		"DA261_hIPSC_h6_S56" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs5_jakobssonlab/CTG_Seq107_111_112/210330_A00681_0333_BH5K7WDRXY/Data/Intensities/BaseCalls/Diahann_RNaseq/56_seq112",
+		"DA238_hIPSC_h48_S57" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs5_jakobssonlab/CTG_Seq107_111_112/210330_A00681_0333_BH5K7WDRXY/Data/Intensities/BaseCalls/Diahann_RNaseq/57_seq112",
+		"DA280_hIPSC_h48_S58" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs5_jakobssonlab/CTG_Seq107_111_112/210330_A00681_0333_BH5K7WDRXY/Data/Intensities/BaseCalls/Diahann_RNaseq/58_seq112",
+		"DA283_hIPSC_h48_S59" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs5_jakobssonlab/CTG_Seq107_111_112/210330_A00681_0333_BH5K7WDRXY/Data/Intensities/BaseCalls/Diahann_RNaseq/59_seq112",
+		"human_h9_258" : "/scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/human.chimp_Grassi/h9/human_h9_258",
+		"human_h9_264" : "/scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/human.chimp_Grassi/h9/human_h9_264",
+		"human_h9_270" : "/scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/human.chimp_Grassi/h9/human_h9_270",
+		"human_h9_276" : "/scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/human.chimp_Grassi/h9/human_h9_276",
+		"human_h9_261" : "/scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/human.chimp_Grassi/h9/human_h9_261",
+		"human_h9_267" : "/scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/human.chimp_Grassi/h9/human_h9_267",
+		"human_h9_273" : "/scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/human.chimp_Grassi/h9/human_h9_273",
+		"human_h9_279" : "/scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/human.chimp_Grassi/h9/human_h9_279"
+	},
+	"samples_esc":
+	{
+		"human_h9_258" : "/scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/human.chimp_Grassi/h9/human_h9_258",
+		"human_h9_264" : "/scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/human.chimp_Grassi/h9/human_h9_264",
+		"human_h9_270" : "/scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/human.chimp_Grassi/h9/human_h9_270",
+		"human_h9_276" : "/scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/human.chimp_Grassi/h9/human_h9_276",
+		"human_h9_261" : "/scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/human.chimp_Grassi/h9/human_h9_261",
+		"human_h9_267" : "/scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/human.chimp_Grassi/h9/human_h9_267",
+		"human_h9_273" : "/scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/human.chimp_Grassi/h9/human_h9_273",
+		"human_h9_279" : "/scale/gr01/shared/jjakobsson/backup/raquelgg_fs3_jakobssonlab/human.chimp_Grassi/h9/human_h9_279"
+	},
+	"samples_org_lacz":
+	{
+		"AA_h48_CRISPRi_LacZ_LV3599_d15_organoids_a" :	"/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX/2023_282/Data/concatenated_fastq",
+		"AA_h48_CRISPRi_LacZ_LV3599_d15_organoids_b" :	"/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX/2023_282/Data/concatenated_fastq",
+		"AA_h48_CRISPRi_LacZ_LV3599_d15_organoids_c" :	"/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX/2023_282/Data/concatenated_fastq",
+		"L1_CRISPRi_LacZ_LV3599_d15_organoids_a_S18" : "/home/raquelgg/ls2_fs1/raquelgg_fs1_jakobssonlab/CTG_JGJSeq233_237_250_257_2023_145/230706_A00681_0891_AHGKYTDRX3/Data/Intensities/BaseCalls",
+		"L1_CRISPRi_LacZ_LV3599_d15_organoids_b_S19" : "/home/raquelgg/ls2_fs1/raquelgg_fs1_jakobssonlab/CTG_JGJSeq233_237_250_257_2023_145/230706_A00681_0891_AHGKYTDRX3/Data/Intensities/BaseCalls",
+		"L1_CRISPRi_LacZ_LV3599_d15_organoids_c_S20" : "/home/raquelgg/ls2_fs1/raquelgg_fs1_jakobssonlab/CTG_JGJSeq233_237_250_257_2023_145/230706_A00681_0891_AHGKYTDRX3/Data/Intensities/BaseCalls",
+		"MN07_LacZ_Rep1_bulkRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch2_S33" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_LacZ_Rep2_bulkRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch2_S34" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_LacZ_Rep3_bulkRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch2_S35" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes"	
+	},
+	"samples_org":
+	{
+		"AA_h48_CRISPRi_LacZ_LV3599_d15_organoids_a" :	"/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX/2023_282/Data/concatenated_fastq",
+		"AA_h48_CRISPRi_LacZ_LV3599_d15_organoids_b" :	"/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX/2023_282/Data/concatenated_fastq",
+		"AA_h48_CRISPRi_LacZ_LV3599_d15_organoids_c" :	"/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX/2023_282/Data/concatenated_fastq",
+		"AA_h48_L1_CRISPRi_g3_LV3824_d15_organoids_a" :	"/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX/2023_282/Data/concatenated_fastq",
+		"AA_h48_L1_CRISPRi_g3_LV3824_d15_organoids_b" :	"/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX/2023_282/Data/concatenated_fastq",
+		"AA_h48_L1_CRISPRi_g3_LV3824_d15_organoids_c" :	"/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX/2023_282/Data/concatenated_fastq",
+		"L1_CRISPRi_LV3824_d15_organoids_a_S15" : "/home/raquelgg/ls2_fs1/raquelgg_fs1_jakobssonlab/CTG_JGJSeq233_237_250_257_2023_145/230706_A00681_0891_AHGKYTDRX3/Data/Intensities/BaseCalls",
+		"L1_CRISPRi_LV3824_d15_organoids_b_S16" : "/home/raquelgg/ls2_fs1/raquelgg_fs1_jakobssonlab/CTG_JGJSeq233_237_250_257_2023_145/230706_A00681_0891_AHGKYTDRX3/Data/Intensities/BaseCalls",
+		"L1_CRISPRi_LV3824_d15_organoids_c_S17" : "/home/raquelgg/ls2_fs1/raquelgg_fs1_jakobssonlab/CTG_JGJSeq233_237_250_257_2023_145/230706_A00681_0891_AHGKYTDRX3/Data/Intensities/BaseCalls",
+		"L1_CRISPRi_LacZ_LV3599_d15_organoids_a_S18" : "/home/raquelgg/ls2_fs1/raquelgg_fs1_jakobssonlab/CTG_JGJSeq233_237_250_257_2023_145/230706_A00681_0891_AHGKYTDRX3/Data/Intensities/BaseCalls",
+		"L1_CRISPRi_LacZ_LV3599_d15_organoids_b_S19" : "/home/raquelgg/ls2_fs1/raquelgg_fs1_jakobssonlab/CTG_JGJSeq233_237_250_257_2023_145/230706_A00681_0891_AHGKYTDRX3/Data/Intensities/BaseCalls",
+		"L1_CRISPRi_LacZ_LV3599_d15_organoids_c_S20" : "/home/raquelgg/ls2_fs1/raquelgg_fs1_jakobssonlab/CTG_JGJSeq233_237_250_257_2023_145/230706_A00681_0891_AHGKYTDRX3/Data/Intensities/BaseCalls",
+		"MN07_gRNA1_Rep1_bulkRNA_org_hiPS6_LV3822_L1_CRISPRi_d15_batch2_S36" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_gRNA1_Rep2_bulkRNA_org_hiPS6_LV3822_L1_CRISPRi_d15_batch2_S37" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_gRNA1_Rep3_bulkRNA_org_hiPS6_LV3822_L1_CRISPRi_d15_batch2_S38" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_gRNA3_Rep1_bulkRNA_org_hiPS6_LV3824_L1_CRISPRi_d15_batch2_S30" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_gRNA3_Rep2_bulkRNA_org_hiPS6_LV3824_L1_CRISPRi_d15_batch2_S31" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_gRNA3_Rep3_bulkRNA_org_hiPS6_LV3824_L1_CRISPRi_d15_batch2_S32" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_LacZ_Rep1_bulkRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch2_S33" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_LacZ_Rep2_bulkRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch2_S34" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_LacZ_Rep3_bulkRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch2_S35" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes"	
+	},
+	"samples_WT_hiPSC": 
+	{
+		"DA246_hIPSC_h6_S54" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs5_jakobssonlab/CTG_Seq107_111_112/210330_A00681_0333_BH5K7WDRXY/Data/Intensities/BaseCalls/Diahann_RNaseq/54_seq112",
+		"DA272_hIPSC_h6_S55" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs5_jakobssonlab/CTG_Seq107_111_112/210330_A00681_0333_BH5K7WDRXY/Data/Intensities/BaseCalls/Diahann_RNaseq/55_seq112",
+		"DA261_hIPSC_h6_S56" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs5_jakobssonlab/CTG_Seq107_111_112/210330_A00681_0333_BH5K7WDRXY/Data/Intensities/BaseCalls/Diahann_RNaseq/56_seq112",
+		"DA238_hIPSC_h48_S57" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs5_jakobssonlab/CTG_Seq107_111_112/210330_A00681_0333_BH5K7WDRXY/Data/Intensities/BaseCalls/Diahann_RNaseq/57_seq112",
+		"DA280_hIPSC_h48_S58" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs5_jakobssonlab/CTG_Seq107_111_112/210330_A00681_0333_BH5K7WDRXY/Data/Intensities/BaseCalls/Diahann_RNaseq/58_seq112",
+		"DA283_hIPSC_h48_S59" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs5_jakobssonlab/CTG_Seq107_111_112/210330_A00681_0333_BH5K7WDRXY/Data/Intensities/BaseCalls/Diahann_RNaseq/59_seq112"
+	},
+	"samples_cutnrun":
+	{
+		"AA_hiPS6_L1_CRISPRi_LV3824_H3K4me3_S25" : "/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/JGJSeq274_287CoR/240109_NB502004_0210_AH2NWNBGXV/Data/Intensities/BaseCalls",
+		"AA_hiPS6_L1_CRISPRi_LV3824_H3K9me3_S24" : "/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/JGJSeq274_287CoR/240109_NB502004_0210_AH2NWNBGXV/Data/Intensities/BaseCalls",
+		"AA_hiPS6_L1_CRISPRi_LV3824_IgG_S26" : "/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/JGJSeq274_287CoR/240109_NB502004_0210_AH2NWNBGXV/Data/Intensities/BaseCalls",
+		"AA_hiPS6_LacZ_CRISPRi_LV3599_H3K4me3_S22" : "/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/JGJSeq274_287CoR/240109_NB502004_0210_AH2NWNBGXV/Data/Intensities/BaseCalls",
+		"AA_hiPS6_LacZ_CRISPRi_LV3599_H3K9me3_S21" : "/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/JGJSeq274_287CoR/240109_NB502004_0210_AH2NWNBGXV/Data/Intensities/BaseCalls",
+		"AA_hiPS6_LacZ_CRISPRi_LV3599_IgG_S23" : "/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/JGJSeq274_287CoR/240109_NB502004_0210_AH2NWNBGXV/Data/Intensities/BaseCalls",
+		"hiPS48_H3K4me3_S25" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs3_jjlab/CutNRun_Testdata_April142023/Seq228_229_231cutorun/230403_NB502004_0199_AHW37GBGXN/Data/Intensities/BaseCalls",
+		"hiPS48_H3K9me3_S26" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs3_jjlab/CutNRun_Testdata_April142023/Seq228_229_231cutorun/230403_NB502004_0199_AHW37GBGXN/Data/Intensities/BaseCalls",
+		"hiPS48_IgG_S24" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs3_jjlab/CutNRun_Testdata_April142023/Seq228_229_231cutorun/230403_NB502004_0199_AHW37GBGXN/Data/Intensities/BaseCalls",
+		"hiPS6_H3K9me3_S23" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs3_jjlab/CutNRun_Testdata_April142023/Seq228_229_231cutorun/230403_NB502004_0199_AHW37GBGXN/Data/Intensities/BaseCalls",
+		"hiPS6_H3K4me3_S22" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs3_jjlab/CutNRun_Testdata_April142023/Seq228_229_231cutorun/230403_NB502004_0199_AHW37GBGXN/Data/Intensities/BaseCalls",
+		"hiPS6_IgG_S21" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs3_jjlab/CutNRun_Testdata_April142023/Seq228_229_231cutorun/230403_NB502004_0199_AHW37GBGXN/Data/Intensities/BaseCalls",
+		"AA_hiPS6_L1_CRISPRi_gRNA3_LV3824_lightXL_CUTnRUN_Cas9_S11" : "/projects/fs1/jakobssonlab/JGJseq303_304_307CoR/240215_NB502004_0212_AH3NWYAFX7/Data/Intensities/BaseCalls",
+		"AA_hiPS6_L1_CRISPRi_LacZ_LV3599_lightXL_CUTnRUN_Cas9_S10" : "/projects/fs1/jakobssonlab/JGJseq303_304_307CoR/240215_NB502004_0212_AH3NWYAFX7/Data/Intensities/BaseCalls",
+		"AA_hiPS6_L1_CRISPRi_LacZ_LV3599_lightXL_CUTnRUN_IgG_S9" : "/projects/fs1/jakobssonlab/JGJseq303_304_307CoR/240215_NB502004_0212_AH3NWYAFX7/Data/Intensities/BaseCalls"
+	}, 
+	"samples_cutnrun_WT_hiPSC" : 
+	{
+		"hiPS48_H3K4me3_S25" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs3_jjlab/CutNRun_Testdata_April142023/Seq228_229_231cutorun/230403_NB502004_0199_AHW37GBGXN/Data/Intensities/BaseCalls",
+		"hiPS48_H3K9me3_S26" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs3_jjlab/CutNRun_Testdata_April142023/Seq228_229_231cutorun/230403_NB502004_0199_AHW37GBGXN/Data/Intensities/BaseCalls",
+		"hiPS48_IgG_S24" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs3_jjlab/CutNRun_Testdata_April142023/Seq228_229_231cutorun/230403_NB502004_0199_AHW37GBGXN/Data/Intensities/BaseCalls",
+		"hiPS6_H3K9me3_S23" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs3_jjlab/CutNRun_Testdata_April142023/Seq228_229_231cutorun/230403_NB502004_0199_AHW37GBGXN/Data/Intensities/BaseCalls",
+		"hiPS6_H3K4me3_S22" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs3_jjlab/CutNRun_Testdata_April142023/Seq228_229_231cutorun/230403_NB502004_0199_AHW37GBGXN/Data/Intensities/BaseCalls",
+		"hiPS6_IgG_S21" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs3_jjlab/CutNRun_Testdata_April142023/Seq228_229_231cutorun/230403_NB502004_0199_AHW37GBGXN/Data/Intensities/BaseCalls"
+	}, 
+	"samples_cutnrun_WT_hiPSC_H3K4me3" :
+	{
+		"hiPS48_H3K4me3_S25" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs3_jjlab/CutNRun_Testdata_April142023/Seq228_229_231cutorun/230403_NB502004_0199_AHW37GBGXN/Data/Intensities/BaseCalls",
+		"hiPS48_IgG_S24" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs3_jjlab/CutNRun_Testdata_April142023/Seq228_229_231cutorun/230403_NB502004_0199_AHW37GBGXN/Data/Intensities/BaseCalls",
+		"hiPS6_H3K4me3_S22" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs3_jjlab/CutNRun_Testdata_April142023/Seq228_229_231cutorun/230403_NB502004_0199_AHW37GBGXN/Data/Intensities/BaseCalls",
+		"hiPS6_IgG_S21" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs3_jjlab/CutNRun_Testdata_April142023/Seq228_229_231cutorun/230403_NB502004_0199_AHW37GBGXN/Data/Intensities/BaseCalls"
+	},
+	"samples_cutnrun_crispri":
+	{
+		"AA_hiPS6_L1_CRISPRi_LV3824_H3K4me3_S25" : "/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/JGJSeq274_287CoR/240109_NB502004_0210_AH2NWNBGXV/Data/Intensities/BaseCalls",
+		"AA_hiPS6_L1_CRISPRi_LV3824_IgG_S26" : "/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/JGJSeq274_287CoR/240109_NB502004_0210_AH2NWNBGXV/Data/Intensities/BaseCalls",
+		"AA_hiPS6_LacZ_CRISPRi_LV3599_H3K4me3_S22" : "/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/JGJSeq274_287CoR/240109_NB502004_0210_AH2NWNBGXV/Data/Intensities/BaseCalls",
+		"AA_hiPS6_LacZ_CRISPRi_LV3599_IgG_S23" : "/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/JGJSeq274_287CoR/240109_NB502004_0210_AH2NWNBGXV/Data/Intensities/BaseCalls",
+		"AA_hiPS6_LacZ_CRISPRi_LV3599_H3K9me3_S21" : "/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/JGJSeq274_287CoR/240109_NB502004_0210_AH2NWNBGXV/Data/Intensities/BaseCalls",
+		"AA_hiPS6_L1_CRISPRi_LV3824_H3K9me3_S24" : "/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/JGJSeq274_287CoR/240109_NB502004_0210_AH2NWNBGXV/Data/Intensities/BaseCalls"
+	},
+	"samples_cutnrun_crispri_H3K4me3":
+	{
+		"AA_hiPS6_L1_CRISPRi_LV3824_H3K4me3_S25" : "/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/JGJSeq274_287CoR/240109_NB502004_0210_AH2NWNBGXV/Data/Intensities/BaseCalls",
+		"AA_hiPS6_L1_CRISPRi_LV3824_IgG_S26" : "/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/JGJSeq274_287CoR/240109_NB502004_0210_AH2NWNBGXV/Data/Intensities/BaseCalls",
+		"AA_hiPS6_LacZ_CRISPRi_LV3599_H3K4me3_S22" : "/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/JGJSeq274_287CoR/240109_NB502004_0210_AH2NWNBGXV/Data/Intensities/BaseCalls",
+		"AA_hiPS6_LacZ_CRISPRi_LV3599_IgG_S23" : "/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/JGJSeq274_287CoR/240109_NB502004_0210_AH2NWNBGXV/Data/Intensities/BaseCalls"
+	}, 
+	"samples_cutnrun_dcas9" :
+	{
+		"AA_hiPS6_L1_CRISPRi_gRNA3_LV3824_lightXL_CUTnRUN_Cas9_S11" : "/projects/fs1/jakobssonlab/JGJseq303_304_307CoR/240215_NB502004_0212_AH3NWYAFX7/Data/Intensities/BaseCalls",
+		"AA_hiPS6_L1_CRISPRi_LacZ_LV3599_lightXL_CUTnRUN_Cas9_S10" : "/projects/fs1/jakobssonlab/JGJseq303_304_307CoR/240215_NB502004_0212_AH3NWYAFX7/Data/Intensities/BaseCalls",
+		"AA_hiPS6_L1_CRISPRi_LacZ_LV3599_lightXL_CUTnRUN_IgG_S9" : "/projects/fs1/jakobssonlab/JGJseq303_304_307CoR/240215_NB502004_0212_AH3NWYAFX7/Data/Intensities/BaseCalls"
+	},
+	"cutnrun_paired":
+	{
+		"hiPS48_H3K4me3_S25" : "hiPS48_IgG_S24",
+		"hiPS6_H3K4me3_S22" : "hiPS6_IgG_S21",
+		"AA_hiPS6_L1_CRISPRi_LV3824_H3K4me3_S25" : "AA_hiPS6_L1_CRISPRi_LV3824_IgG_S26",
+		"AA_hiPS6_LacZ_CRISPRi_LV3599_H3K4me3_S22" : "AA_hiPS6_LacZ_CRISPRi_LV3599_IgG_S23",
+		"AA_hiPS6_L1_CRISPRi_gRNA3_LV3824_lightXL_CUTnRUN_Cas9_S11" : "AA_hiPS6_L1_CRISPRi_LacZ_LV3599_lightXL_CUTnRUN_IgG_S9",
+		"AA_hiPS6_L1_CRISPRi_LacZ_LV3599_lightXL_CUTnRUN_Cas9_S10" : "AA_hiPS6_L1_CRISPRi_LacZ_LV3599_lightXL_CUTnRUN_IgG_S9"
+	},
+	"cutnrun_histone" : 
+	{
+		"hiPS48_H3K4me3_S25" : "hiPS48_H3K4me3_S25",
+		"hiPS6_H3K4me3_S22" : "hiPS6_H3K4me3_S22",
+		"AA_hiPS6_L1_CRISPRi_LV3824_H3K4me3_S25" : "AA_hiPS6_L1_CRISPRi_LV3824_H3K4me3_S25",
+		"AA_hiPS6_LacZ_CRISPRi_LV3599_H3K4me3_S22" : "AA_hiPS6_LacZ_CRISPRi_LV3599_H3K4me3_S22"
+	},
+	"cutnrun_histone_igg" : 
+	{
+		"hiPS6_IgG_S21" : "hiPS48_IgG_S24",
+		"hiPS48_IgG_S24" : "hiPS48_IgG_S24",
+		"AA_hiPS6_L1_CRISPRi_LV3824_IgG_S26" : "AA_hiPS6_L1_CRISPRi_LV3824_IgG_S26",
+		"AA_hiPS6_LacZ_CRISPRi_LV3599_IgG_S23" : "AA_hiPS6_LacZ_CRISPRi_LV3599_IgG_S23"
+	},
+	"cutnrun_factor_igg" :
+	{
+		"AA_hiPS6_L1_CRISPRi_LacZ_LV3599_lightXL_CUTnRUN_IgG_S9" : ""
+	},
+	"cutnrun_factor" :
+	{
+		"AA_hiPS6_L1_CRISPRi_gRNA3_LV3824_lightXL_CUTnRUN_Cas9_S11" : "",
+		"AA_hiPS6_L1_CRISPRi_LacZ_LV3599_lightXL_CUTnRUN_Cas9_S10" : ""
+	},
+	"samples_crispri":
+	{
+		"AA30_h6_lv3822_1_CRISPRi_S7" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA32_h6_lv3822_2_CRISPRi_S8" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA34_h6_lv3822_3_CRISPRi_S9" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA138_hiPS6_lv3823_a_L1_CRISPRi_S21" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA139_hiPS6_lv3823_b_L1_CRISPRi_S22" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA140_hiPS6_lv3823_c_L1_CRISPRi_S23" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA141_hiPS6_lv3824_a_L1_CRISPRi_S24" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA142_hiPS6_lv3824_b_L1_CRISPRi_S25" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA143_hiPS6_lv3824_c_L1_CRISPRi_S26" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA42_h6_lv3599_1_ctrl_S1" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA44_h6_lv3599_2_ctrl_S2" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA46_h6_lv3599_3_ctrl_S3" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA135_hiPS6_lv3599_a_L1_LacZ_S18" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA136_hiPS6_lv3599_b_L1_LacZ_S19" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA137_hiPS6_lv3599_c_L1_LacZ_S20" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA146_hiPS48_lv3824_a_L1_CRISPRi_S29" : "/projects/fs3/jakobssonlab/testdata_ctg_2023_50/ctg_2023_050/FastQFiles",
+		"AA147_hiPS48_lv3824_b_L1_CRISPRi_S30" : "/projects/fs3/jakobssonlab/testdata_ctg_2023_50/ctg_2023_050/FastQFiles",
+		"AA148_hiPS48_lv3824_c_L1_CRISPRi_S31" : "/projects/fs3/jakobssonlab/testdata_ctg_2023_50/ctg_2023_050/FastQFiles",
+		"AA149_hiPS48_lv3599_a_L1_LacZ_S32" : "/projects/fs3/jakobssonlab/testdata_ctg_2023_50/ctg_2023_050/FastQFiles",
+		"AA150_hiPS48_lv3599_b_L1_LacZ_S33" : "/projects/fs3/jakobssonlab/testdata_ctg_2023_50/ctg_2023_050/FastQFiles",
+		"AA151_hiPS48_lv3599_c_L1_LacZ_S34" : "/projects/fs3/jakobssonlab/testdata_ctg_2023_50/ctg_2023_050/FastQFiles",
+		"AA_h48_CRISPRi_LacZ_LV3599_d15_organoids_a" :	"/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX/2023_282/Data/concatenated_fastq",
+		"AA_h48_CRISPRi_LacZ_LV3599_d15_organoids_b" :	"/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX/2023_282/Data/concatenated_fastq",
+		"AA_h48_CRISPRi_LacZ_LV3599_d15_organoids_c" :	"/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX/2023_282/Data/concatenated_fastq",
+		"AA_h48_L1_CRISPRi_g3_LV3824_d15_organoids_a" :	"/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX/2023_282/Data/concatenated_fastq",
+		"AA_h48_L1_CRISPRi_g3_LV3824_d15_organoids_b" :	"/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX/2023_282/Data/concatenated_fastq",
+		"AA_h48_L1_CRISPRi_g3_LV3824_d15_organoids_c" :	"/scale/gr01/shared/jjakobsson/backup/nino_fs1_jakobssonlab/CTGseq278_280_281_282_285_288_289_290_291_2023_282NovaseqX/2023_282/Data/concatenated_fastq",
+		"L1_CRISPRi_LV3824_d15_organoids_a_S15" : "/home/raquelgg/ls2_fs1/raquelgg_fs1_jakobssonlab/CTG_JGJSeq233_237_250_257_2023_145/230706_A00681_0891_AHGKYTDRX3/Data/Intensities/BaseCalls",
+		"L1_CRISPRi_LV3824_d15_organoids_b_S16" : "/home/raquelgg/ls2_fs1/raquelgg_fs1_jakobssonlab/CTG_JGJSeq233_237_250_257_2023_145/230706_A00681_0891_AHGKYTDRX3/Data/Intensities/BaseCalls",
+		"L1_CRISPRi_LV3824_d15_organoids_c_S17" : "/home/raquelgg/ls2_fs1/raquelgg_fs1_jakobssonlab/CTG_JGJSeq233_237_250_257_2023_145/230706_A00681_0891_AHGKYTDRX3/Data/Intensities/BaseCalls",
+		"L1_CRISPRi_LacZ_LV3599_d15_organoids_a_S18" : "/home/raquelgg/ls2_fs1/raquelgg_fs1_jakobssonlab/CTG_JGJSeq233_237_250_257_2023_145/230706_A00681_0891_AHGKYTDRX3/Data/Intensities/BaseCalls",
+		"L1_CRISPRi_LacZ_LV3599_d15_organoids_b_S19" : "/home/raquelgg/ls2_fs1/raquelgg_fs1_jakobssonlab/CTG_JGJSeq233_237_250_257_2023_145/230706_A00681_0891_AHGKYTDRX3/Data/Intensities/BaseCalls",
+		"L1_CRISPRi_LacZ_LV3599_d15_organoids_c_S20" : "/home/raquelgg/ls2_fs1/raquelgg_fs1_jakobssonlab/CTG_JGJSeq233_237_250_257_2023_145/230706_A00681_0891_AHGKYTDRX3/Data/Intensities/BaseCalls",
+		"MN07_gRNA1_Rep1_bulkRNA_org_hiPS6_LV3822_L1_CRISPRi_d15_batch2_S36" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_gRNA1_Rep2_bulkRNA_org_hiPS6_LV3822_L1_CRISPRi_d15_batch2_S37" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_gRNA1_Rep3_bulkRNA_org_hiPS6_LV3822_L1_CRISPRi_d15_batch2_S38" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_gRNA2_Rep1_bulkRNA_org_hiPS6_LV3823_L1_CRISPRi_d15_batch2_S39" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_gRNA2_Rep2_bulkRNA_org_hiPS6_LV3823_L1_CRISPRi_d15_batch2_S40" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_gRNA2_Rep3_bulkRNA_org_hiPS6_LV3823_L1_CRISPRi_d15_batch2_S29" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_gRNA3_Rep1_bulkRNA_org_hiPS6_LV3824_L1_CRISPRi_d15_batch2_S30" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_gRNA3_Rep2_bulkRNA_org_hiPS6_LV3824_L1_CRISPRi_d15_batch2_S31" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_gRNA3_Rep3_bulkRNA_org_hiPS6_LV3824_L1_CRISPRi_d15_batch2_S32" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_LacZ_Rep1_bulkRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch2_S33" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_LacZ_Rep2_bulkRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch2_S34" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes",
+		"MN07_LacZ_Rep3_bulkRNA_org_hiPS6_LV3599_L1_CRISPRi_d15_batch2_S35" : "/scale/gr01/shared/jjakobsson/backup/ysharma_fs1_jjlab/raw_data/CTG_2024_017_Seq296_297_305_310_315_bulkRNASeq/2024_071/0_fastq/concatenated_lanes"
+	},
+	"samples_hiPSC_crispri":
+	{
+		"AA30_h6_lv3822_1_CRISPRi_S7" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA32_h6_lv3822_2_CRISPRi_S8" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA34_h6_lv3822_3_CRISPRi_S9" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA141_hiPS6_lv3824_a_L1_CRISPRi_S24" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA142_hiPS6_lv3824_b_L1_CRISPRi_S25" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA143_hiPS6_lv3824_c_L1_CRISPRi_S26" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA42_h6_lv3599_1_ctrl_S1" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA44_h6_lv3599_2_ctrl_S2" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA46_h6_lv3599_3_ctrl_S3" : "/projects/fs5/jakobssonlab/CTG_JGJSeq156_159_160truseq/fastq_files",
+		"AA135_hiPS6_lv3599_a_L1_LacZ_S18" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA136_hiPS6_lv3599_b_L1_LacZ_S19" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA137_hiPS6_lv3599_c_L1_LacZ_S20" : "/projects/fs5/jakobssonlab/CTG_JGJSeq205_207_208_214_truseq_2023_021/raw_data/230213_A01932_0129_AHWNGYDRX2/Data/Intensities/BaseCalls",
+		"AA146_hiPS48_lv3824_a_L1_CRISPRi_S29" : "/projects/fs3/jakobssonlab/testdata_ctg_2023_50/ctg_2023_050/FastQFiles",
+		"AA147_hiPS48_lv3824_b_L1_CRISPRi_S30" : "/projects/fs3/jakobssonlab/testdata_ctg_2023_50/ctg_2023_050/FastQFiles",
+		"AA148_hiPS48_lv3824_c_L1_CRISPRi_S31" : "/projects/fs3/jakobssonlab/testdata_ctg_2023_50/ctg_2023_050/FastQFiles",
+		"AA149_hiPS48_lv3599_a_L1_LacZ_S32" : "/projects/fs3/jakobssonlab/testdata_ctg_2023_50/ctg_2023_050/FastQFiles",
+		"AA150_hiPS48_lv3599_b_L1_LacZ_S33" : "/projects/fs3/jakobssonlab/testdata_ctg_2023_50/ctg_2023_050/FastQFiles",
+		"AA151_hiPS48_lv3599_c_L1_LacZ_S34" : "/projects/fs3/jakobssonlab/testdata_ctg_2023_50/ctg_2023_050/FastQFiles"
+	},
+	"samples_nuclear_cytosol":
+	{
+		"MN07_gRNA1_Rep1_bulkRNA_hiPS6_LV3822_L1_CRISPRi_cytosolic_S41_L007" : "/scale/gr01/shared/jjakobsson/backup/rawdatasets_2024/2024_159/0_fastq/22NV7TLT3",
+		"MN07_gRNA1_Rep1_bulkRNA_hiPS6_LV3822_L1_CRISPRi_nuclear_S38_L007" : "/scale/gr01/shared/jjakobsson/backup/rawdatasets_2024/2024_159/0_fastq/22NV7TLT3",
+		"MN07_gRNA1_Rep2_bulkRNA_hiPS6_LV3822_L1_CRISPRi_cytosolic_S42_L007" : "/scale/gr01/shared/jjakobsson/backup/rawdatasets_2024/2024_159/0_fastq/22NV7TLT3",
+		"MN07_gRNA1_Rep2_bulkRNA_hiPS6_LV3822_L1_CRISPRi_nuclear_S39_L007" : "/scale/gr01/shared/jjakobsson/backup/rawdatasets_2024/2024_159/0_fastq/22NV7TLT3",
+		"MN07_gRNA1_Rep3_bulkRNA_hiPS6_LV3822_L1_CRISPRi_cytosolic_S43_L007" : "/scale/gr01/shared/jjakobsson/backup/rawdatasets_2024/2024_159/0_fastq/22NV7TLT3",
+		"MN07_gRNA1_Rep3_bulkRNA_hiPS6_LV3822_L1_CRISPRi_nuclear_S40_L007" : "/scale/gr01/shared/jjakobsson/backup/rawdatasets_2024/2024_159/0_fastq/22NV7TLT3",
+		"MN07_gRNA3_Rep1_bulkRNA_hiPS6_LV3824_L1_CRISPRi_cytosolic_S47_L007" : "/scale/gr01/shared/jjakobsson/backup/rawdatasets_2024/2024_159/0_fastq/22NV7TLT3",
+		"MN07_gRNA3_Rep1_bulkRNA_hiPS6_LV3824_L1_CRISPRi_nuclear_S44_L007" : "/scale/gr01/shared/jjakobsson/backup/rawdatasets_2024/2024_159/0_fastq/22NV7TLT3",
+		"MN07_gRNA3_Rep2_bulkRNA_hiPS6_LV3824_L1_CRISPRi_cytosolic_S48_L007" : "/scale/gr01/shared/jjakobsson/backup/rawdatasets_2024/2024_159/0_fastq/22NV7TLT3",
+		"MN07_gRNA3_Rep2_bulkRNA_hiPS6_LV3824_L1_CRISPRi_nuclear_S45_L007" : "/scale/gr01/shared/jjakobsson/backup/rawdatasets_2024/2024_159/0_fastq/22NV7TLT3",
+		"MN07_gRNA3_Rep3_bulkRNA_hiPS6_LV3824_L1_CRISPRi_cytosolic_S49_L007" : "/scale/gr01/shared/jjakobsson/backup/rawdatasets_2024/2024_159/0_fastq/22NV7TLT3",
+		"MN07_gRNA3_Rep3_bulkRNA_hiPS6_LV3824_L1_CRISPRi_nuclear_S46_L007" : "/scale/gr01/shared/jjakobsson/backup/rawdatasets_2024/2024_159/0_fastq/22NV7TLT3",
+		"MN07_LacZ_Rep1_bulkRNA_hiPS6_LV3599_L1_CRISPRi_cytosolic_S80_L008" : "/scale/gr01/shared/jjakobsson/backup/rawdatasets_2024/2024_159/0_fastq/22NV7TLT3",
+		"MN07_LacZ_Rep1_bulkRNA_hiPS6_LV3599_L1_CRISPRi_nuclear_S50_L007" : "/scale/gr01/shared/jjakobsson/backup/rawdatasets_2024/2024_159/0_fastq/22NV7TLT3",
+		"MN07_LacZ_Rep2_bulkRNA_hiPS6_LV3599_L1_CRISPRi_cytosolic_S81_L008" : "/scale/gr01/shared/jjakobsson/backup/rawdatasets_2024/2024_159/0_fastq/22NV7TLT3",
+		"MN07_LacZ_Rep2_bulkRNA_hiPS6_LV3599_L1_CRISPRi_nuclear_S51_L007" : "/scale/gr01/shared/jjakobsson/backup/rawdatasets_2024/2024_159/0_fastq/22NV7TLT3",
+		"MN07_LacZ_Rep3_bulkRNA_hiPS6_LV3599_L1_CRISPRi_cytosolic_S82_L008" : "/scale/gr01/shared/jjakobsson/backup/rawdatasets_2024/2024_159/0_fastq/22NV7TLT3",
+		"MN07_LacZ_Rep3_bulkRNA_hiPS6_LV3599_L1_CRISPRi_nuclear_S52_L007" : "/scale/gr01/shared/jjakobsson/backup/rawdatasets_2024/2024_159/0_fastq/22NV7TLT3"
+	}
+}
