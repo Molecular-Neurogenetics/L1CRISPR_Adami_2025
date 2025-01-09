@@ -42,16 +42,16 @@ development*
 #### Clean data for bulk experiments:
 - `results/` - Directory containing tables:
 	- `tables/`
-		* [**lightXL_gRNA3_peaks_only.bed**](./results/tables/lightXL_gRNA3_peaks_only.bed) - dCas9 peaks only at gRNA1 (dCas9 CUT&RUN)
-		* [**H3K4me3_tagdir_regions_merged_hiPS6_hiPS48_intersect_FL_L1PA_promoters.bed**](./results/tables/H3K4me3_tagdir_regions_merged_hiPS6_hiPS48_intersect_FL_L1PA_promoters.bed) - Intersection between H3K4me3 peaks and FL-L1s (H3K4me3 CUT&RUN and bulk RNAseq)
-		* [**FL_L1PAs_DEA.xlsx**](./results/tables/FL_L1PAs_DEA.xlsx) - Differentially expressed FL-L1 (bulk RNAseq)
-		* [**targeted_FL_L1_DEA_crispri_iPSC.bed**](./results/tables/targeted_FL_L1_DEA_crispri_iPSC.bed) - FL-L1 DEA in CRIPSRi comparisons (bulk RNAseq)
-		* [**FL_L1PA_LacZ_org_expressed_intersect_protein_genes.bed**](./results/tables/FL_L1PA_LacZ_org_expressed_intersect_protein_genes.bed) - Intersection of FL-L1 expressed at LacZ organoids to protein coding genes and their exons (bulk RNAseq)
-		* [**FL_L1PA_WT_hiPSC_expressed_intersect_protein_genes.bed**](./results/tables/FL_L1PA_WT_hiPSC_expressed_intersect_protein_genes.bed) - Intersection of FL-L1 expressed at WT hiPSC to protein coding genes and their exons (bulk RNAseq)
-		* [**FL_L1HS_PA4_promoter.bed**](./results/tables/FL_L1HS_PA4_promoter.bed) - BED file used to analyse methylation status over the expressed L1s' promoters (bulk RNAseq)
-		* [**FL_L1HS_PA4_promoter.MN10_WT_Rep1_ontDNA_iPSC_hiPS6_human_basecalls_5mC_5hmC_hg38.sorted.cohort.segmeth.mc10.mr1.segplot_data.csv**](./results/tables/FL_L1HS_PA4_promoter.MN10_WT_Rep1_ontDNA_iPSC_hiPS6_human_basecalls_5mC_5hmC_hg38.sorted.cohort.segmeth.mc10.mr1.segplot_data.csv) - FL-L1 promoters DNA methylation status (ONT DNAseq)
-		* [**FL_L1PA_LacZ_org_WT_hiPSC_expressed_promoter.MN10_WT_Rep1_ontDNA_iPSC_hiPS6_human_basecalls_5mC_5hmC_hg38.sorted.cohort.segmeth.tsv**](./results/tables/FL_L1PA_LacZ_org_WT_hiPSC_expressed_promoter.MN10_WT_Rep1_ontDNA_iPSC_hiPS6_human_basecalls_5mC_5hmC_hg38.sorted.cohort.segmeth.tsv) - DNA methylation over FL-L1 promoters from elements expressed at hiPSC AND organoids (ONT DNAseq)
-		* [**FL_L1PA_WT_hiPSC_only_expressed_promoter.MN10_WT_Rep1_ontDNA_iPSC_hiPS6_human_basecalls_5mC_5hmC_hg38.sorted.cohort.segmeth.tsv**](./results/tables/FL_L1PA_WT_hiPSC_only_expressed_promoter.MN10_WT_Rep1_ontDNA_iPSC_hiPS6_human_basecalls_5mC_5hmC_hg38.sorted.cohort.segmeth.tsv) - DNA methylation over FL-L1 promoters from elements expressed at hiPSC only (ONT DNAseq)
+		* [**lightXL_gRNA1_peaks_only.bed**](./bulk/results/tables/lightXL_gRNA1_peaks_only.bed) - dCas9 peaks only at gRNA1 (dCas9 CUT&RUN)
+		* [**H3K4me3_tagdir_regions_merged_hiPS6_hiPS48_intersect_FL_L1PA_promoters.bed**](./bulk/results/tables/H3K4me3_tagdir_regions_merged_hiPS6_hiPS48_intersect_FL_L1PA_promoters.bed) - Intersection between H3K4me3 peaks and FL-L1s (H3K4me3 CUT&RUN and bulk RNAseq)
+		* [**FL_L1PAs_DEA.xlsx**](./bulk/results/tables/FL_L1PAs_DEA.xlsx) - Differentially expressed FL-L1 (bulk RNAseq)
+		* [**targeted_FL_L1_DEA_crispri_iPSC.bed**](./bulk/results/tables/targeted_FL_L1_DEA_crispri_iPSC.bed) - FL-L1 DEA in CRIPSRi comparisons (bulk RNAseq)
+		* [**FL_L1PA_LacZ_org_expressed_intersect_protein_genes.bed**](./bulk/results/tables/FL_L1PA_LacZ_org_expressed_intersect_protein_genes.bed) - Intersection of FL-L1 expressed at LacZ organoids to protein coding genes and their exons (bulk RNAseq)
+		* [**FL_L1PA_WT_hiPSC_expressed_intersect_protein_genes.bed**](./bulk/results/tables/FL_L1PA_WT_hiPSC_expressed_intersect_protein_genes.bed) - Intersection of FL-L1 expressed at WT hiPSC to protein coding genes and their exons (bulk RNAseq)
+		* [**FL_L1HS_PA4_promoter.bed**](./bulk/results/tables/FL_L1HS_PA4_promoter.bed) - BED file used to analyse methylation status over the expressed L1s' promoters (bulk RNAseq)
+		* [**FL_L1HS_PA4_promoter.MN10_WT_Rep1_ontDNA_iPSC_hiPS6_human_basecalls_5mC_5hmC_hg38.sorted.cohort.segmeth.mc10.mr1.segplot_data.csv**](./bulk/results/tables/FL_L1HS_PA4_promoter.MN10_WT_Rep1_ontDNA_iPSC_hiPS6_human_basecalls_5mC_5hmC_hg38.sorted.cohort.segmeth.mc10.mr1.segplot_data.csv) - FL-L1 promoters DNA methylation status (ONT DNAseq)
+		* [**FL_L1PA_LacZ_org_WT_hiPSC_expressed_promoter.MN10_WT_Rep1_ontDNA_iPSC_hiPS6_human_basecalls_5mC_5hmC_hg38.sorted.cohort.segmeth.tsv**](./bulk/results/tables/FL_L1PA_LacZ_org_WT_hiPSC_expressed_promoter.MN10_WT_Rep1_ontDNA_iPSC_hiPS6_human_basecalls_5mC_5hmC_hg38.sorted.cohort.segmeth.tsv) - DNA methylation over FL-L1 promoters from elements expressed at hiPSC AND organoids (ONT DNAseq)
+		* [**FL_L1PA_WT_hiPSC_only_expressed_promoter.MN10_WT_Rep1_ontDNA_iPSC_hiPS6_human_basecalls_5mC_5hmC_hg38.sorted.cohort.segmeth.tsv**](./bulk/results/tables/FL_L1PA_WT_hiPSC_only_expressed_promoter.MN10_WT_Rep1_ontDNA_iPSC_hiPS6_human_basecalls_5mC_5hmC_hg38.sorted.cohort.segmeth.tsv) - DNA methylation over FL-L1 promoters from elements expressed at hiPSC only (ONT DNAseq)
 
 
 ### For `10X` datasets:
