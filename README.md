@@ -66,8 +66,9 @@ development*
 
 #### Clean data for the single nuclei RNAseq experiment
 - `results/tables` : 
-	- [**downreg_cluster_0.txt**](./10X/results/tables/downreg_cluster_0.txt) - Up/downregulated genes in cluster 0 and 1 of L1-CRISPRi organoids
-	- [**downreg_cluster_1.txt**](./10X/results/tables/downreg_cluster_1.txt) - Up/downregulated genes in cluster 0 and 1 of L1-CRISPRi organoids
-	- [**upreg_cluster_0.txt**](./10X/results/tables/upreg_cluster_0.txt) - Up/downregulated genes in cluster 0 and 1 of L1-CRISPRi organoids
-	- [**upreg_cluster_1.txt**](./10X/results/tables/upreg_cluster_1.txt) - Up/downregulated genes in cluster 0 and 1 of L1-CRISPRi organoids
-	- [**goenrich_cluster_0_1_cluster.xlsx**](./10X/results/tables/goenrich_cluster_0_1_cluster.xlsx) - Overrepresentation test of commonly up/downregulated genes
+	- [**downreg_cluster_0.txt**](./10X/results/tables/downreg_cluster_0.txt) - Up/downregulated genes in cluster 0 and 1 of L1-CRISPRi organoids (log2FC < 0). NOTE: not filtered by significance
+	- [**downreg_cluster_1.txt**](./10X/results/tables/downreg_cluster_1.txt) - Up/downregulated genes in cluster 0 and 1 of L1-CRISPRi organoids (log2FC < 0). NOTE: not filtered by significance
+	- [**upreg_cluster_0.txt**](./10X/results/tables/upreg_cluster_0.txt) - Up/downregulated genes in cluster 0 and 1 of L1-CRISPRi organoids (log2FC > 0). NOTE: not filtered by significance
+	- [**upreg_cluster_1.txt**](./10X/results/tables/upreg_cluster_1.txt) - Up/downregulated genes in cluster 0 and 1 of L1-CRISPRi organoids (log2FC > 0). NOTE: not filtered by significance
+	- [**goenrich_cluster_0_1_cluster.xlsx**](./10X/results/tables/goenrich_cluster_0_1_cluster.xlsx) - Overrepresentation test of commonly upregulated genes
+	- [**gene_DEA.xlsx**](./10X/results/tables/gene_DEA.xlsx) - Gene differential expression analysis in each experiment and cluster.
