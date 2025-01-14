@@ -42,6 +42,8 @@ development*
 #### Clean data for bulk experiments:
 - `results/` - Directory containing tables:
 	- `tables/`
+		* [**genes_DEA_crispri.xlsx**](./bulk/results/tables/genes_DEA_crispri.xlsx) - Gene differential expression analysis in each bulk RNAseq experiment.
+		* [**genes_GSEA_crispri.xlsx**](./bulk/results/tables/genes_GSEA_crispri.xlsx) - Gene set enrichment analysis of each bulk RNAseq experiment.
 		* [**lightXL_gRNA1_peaks_only.bed**](./bulk/results/tables/lightXL_gRNA1_peaks_only.bed) - dCas9 peaks only at gRNA1 (dCas9 CUT&RUN)
 		* [**H3K4me3_tagdir_regions_merged_hiPS6_hiPS48_intersect_FL_L1PA_promoters.bed**](./bulk/results/tables/H3K4me3_tagdir_regions_merged_hiPS6_hiPS48_intersect_FL_L1PA_promoters.bed) - Intersection between H3K4me3 peaks and FL-L1s (H3K4me3 CUT&RUN and bulk RNAseq)
 		* [**FL_L1PAs_DEA.xlsx**](./bulk/results/tables/FL_L1PAs_DEA.xlsx) - Differentially expressed FL-L1 (bulk RNAseq)
