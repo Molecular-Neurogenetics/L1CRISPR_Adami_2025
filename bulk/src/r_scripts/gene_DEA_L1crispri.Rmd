@@ -179,7 +179,6 @@ gene_dds$condition <- relevel(gene_dds$condition, "Control")
 gene_dds <- DESeq(gene_dds)
 
 # write.table(as.data.frame(gene_dds$sizeFactor), file = "/Volumes/MyPassport/CRISPRi_L1s/results/tables/gene_sizeFactors.tab", quote = F, sep="\t", col.names = F)
-write.table(as.data.frame(gene_dds$sizeFactor), file = "/Volumes/MyPassport/CRISPRi_L1s/results/tables/gene_sizeFactors2.tab", quote = F, sep="\t", col.names = F)
 
 gene_count_norm <- counts(gene_dds, normalized=T)
 neuronal_genes <- c("WNT3", "POU3F2", "NEUROD4", "NEUROG2", "FOXG1", "NEUROD1", "SOX11", "NES", "SOX1", "SOX2", "ASCL1", "DCX", "NCAM1", "MAP2")
@@ -195,12 +194,6 @@ samplesheet_hips6 <- samplesheet[which(samplesheet$cell == "hiPS6"),]
 samplesheet_hips6 <- samplesheet_hips6[order(samplesheet_hips6$condition),]
 samplesheet_hips6_batch1 <- samplesheet_hips6[which(samplesheet_hips6$seqnum == "CTG_JGJSeq156_159_160truseq"),]
 samplesheet_hips6_batch2 <- samplesheet_hips6[which(samplesheet_hips6$seqnum == "CTG_JGJSeq205_207_208_214_truseq_2023_021"),]
-
-samplesheet_nes <- samplesheet[which(samplesheet$cell == "NES"),]
-samplesheet_nes <- samplesheet_nes[order(samplesheet_nes$condition),]
-samplesheet_nes_batch1 <- samplesheet_nes[which(samplesheet_nes$seqnum == "CTG_JGJSeq156_159_160truseq"),]
-samplesheet_nes_batch2 <- samplesheet_nes[which(samplesheet_nes$seqnum == "CTG_JGJSeq233_237_250_257_2023_145"),]
-
 
 markers <- data.frame(gene = c("neuronal" = neuronal_genes, 
                         "pluripotency" = pluripotency_genes, 
@@ -224,10 +217,6 @@ pheatmap(log2(gene_count_norm[markers$gene,rownames(samplesheet_hips6_batch2)]+0
 pheatmap(log2(gene_count_norm[c(neuronal_genes, pluripotency_genes),rownames(samplesheet_hips48)]+0.5), cluster_cols = F, cluster_rows = F, scale = "none", gaps_col = c(3), main = "hiPS48", annotation_col = samplesheet[,c("LV", "cell")])
 pheatmap(log2(gene_count_norm[markers$gene,rownames(samplesheet_hips48)]+0.5), cluster_cols = F, cluster_rows = F, scale = "none", gaps_col = c(3), main = "hiPS48", annotation_row = markers[,"type", drop=F], annotation_col = samplesheet[,c("LV", "cell")])
 
-pheatmap(log2(gene_count_norm[c(neuronal_genes, pluripotency_genes),rownames(samplesheet_nes_batch1)]+0.5), cluster_cols = F, cluster_rows = F, scale = "none", gaps_col = c(6), main = "Sai2 Batch 1", annotation_col = samplesheet[,c("LV", "cell")])
-pheatmap(log2(gene_count_norm[markers$gene,rownames(samplesheet_nes_batch1)]+0.5), cluster_cols = F, cluster_rows = F, scale = "none", gaps_col = c(6), main = "Sai2 Batch 1", annotation_row = markers[,"type", drop=F], annotation_col = samplesheet[,c("LV", "cell")])
-pheatmap(log2(gene_count_norm[c(neuronal_genes, pluripotency_genes),rownames(samplesheet_nes_batch2)]+0.5), cluster_cols = F, cluster_rows = F, scale = "none", gaps_col = c(3), main = "Sai2 Batch 2", annotation_col = samplesheet[,c("LV", "cell")])
-pheatmap(log2(gene_count_norm[markers$gene,rownames(samplesheet_nes_batch2)]+0.5), cluster_cols = F, cluster_rows = F, scale = "none", gaps_col = c(3), main = "Sai2 Batch 2", annotation_row = markers[,"type", drop=F], annotation_col = samplesheet[,c("LV", "cell")])
 # dev.off()
 
 ```
@@ -276,21 +265,12 @@ plotPCA(gene_vst, intgroup="cell") + ggtitle("All samples: Cell type/line") + th
 plotPCA(gene_vst, intgroup="experiment") + ggtitle("All samples: Experiment") + theme_bw()
 plotPCA(gene_vst, intgroup="condition") + ggtitle("All samples: Condition") + theme_bw()
 plotPCA(gene_vst_list$hiPS6_crispri_g1) + ggtitle("hiPS6_crispri_g1") + theme_bw()
-plotPCA(gene_vst_list$hiPS6_crispri_g2) + ggtitle("hiPS6_crispri_g2") + theme_bw()
 plotPCA(gene_vst_list$hiPS6_crispri_g3) + ggtitle("hiPS6_crispri_g3") + theme_bw()
 plotPCA(gene_vst_list$hiPS48_crispri_g3) + ggtitle("hiPS48_crispri_g3") + theme_bw()
-plotPCA(gene_vst_list$NES_crispra_g1) + ggtitle("NES_crispra_g1") + theme_bw()
-plotPCA(gene_vst_list$NES_crispra_g2) + ggtitle("NES_crispra_g2") + theme_bw()
-plotPCA(gene_vst_list$NES_crispra_g3) + ggtitle("NES_crispra_g3") + theme_bw()
 plotPCA(gene_vst_list$hiPS48_org_crispri_g3) + ggtitle("hiPS48_org_crispri_g3") + theme_bw()
 plotPCA(gene_vst_list$hiPS6_org_crispri_g3) + ggtitle("hiPS6_org_crispri_g3") + theme_bw()
 plotPCA(gene_vst_list$hiPS6_org_crispri_g3_batch2) + ggtitle("hiPS6_org_crispri_g3_batch2") + theme_bw()
-plotPCA(gene_vst_list$hiPS6_org_crispri_g2) + ggtitle("hiPS6_org_crispri_g2") + theme_bw()
 plotPCA(gene_vst_list$hiPS6_org_crispri_g1) + ggtitle("hiPS6_org_crispri_g1") + theme_bw()
-plotPCA(gene_vst_list$hiPS6_org_crispra_g1) + ggtitle("hiPS6_org_crispra_g1") + theme_bw()
-plotPCA(gene_vst_list$hiPS6_org_crispra_g2) + ggtitle("hiPS6_org_crispra_g2") + theme_bw()
-plotPCA(gene_vst_list$hiPS6_org_crispra_g3) + ggtitle("hiPS6_org_crispra_g3") + theme_bw()
-plotPCA(gene_vst_list$hiPS6_org_crispra_g3_batch2) + ggtitle("hiPS6_org_crispra_g3_batch2") + theme_bw()
 # dev.off()
 ```
 
@@ -301,16 +281,6 @@ Mean plots, volcano plots and excel tables...
 library(EnhancedVolcano)
 gene_annotation <- fread("/Volumes/MyPassport/annotations/human/repeatmasker/hg38_rmsk_TEtranscripts_classification.tab", data.table = F, header = F)
 colnames(gene_annotation) <- c("gene_id", "gene_subfamily", "gene_family", "gene_class")
-
-openxlsx::write.xlsx(list("hiPS6_crispri_g1" = gene_res_list_df$hiPS6_crispri_g1[which(abs(gene_res_list_df$hiPS6_crispri_g1$log2FoldChange) > 1 & gene_res_list_df$hiPS6_crispri_g1$padj < 0.05),],
-"hiPS6_crispri_g2" = gene_res_list_df$hiPS6_crispri_g2[which(abs(gene_res_list_df$hiPS6_crispri_g2$log2FoldChange) > 1 & gene_res_list_df$hiPS6_crispri_g2$padj < 0.05),],
-"hiPS6_crispri_g3" = gene_res_list_df$hiPS6_crispri_g3[which(abs(gene_res_list_df$hiPS6_crispri_g3$log2FoldChange) > 1 & gene_res_list_df$hiPS6_crispri_g3$padj < 0.05),],
-"hiPS48_crispri_g3" = gene_res_list_df$hiPS48_crispri_g3[which(abs(gene_res_list_df$hiPS48_crispri_g3$log2FoldChange) > 1 & gene_res_list_df$hiPS48_crispri_g3$padj < 0.05),],
-"hiPS6_org_crispri_g1" = gene_res_list_df$hiPS6_org_crispri_g1[which(abs(gene_res_list_df$hiPS6_org_crispri_g1$log2FoldChange) > 1 & gene_res_list_df$hiPS6_org_crispri_g1$padj < 0.05),],
-"hiPS6_org_crispri_g2" = gene_res_list_df$hiPS6_org_crispri_g2[which(abs(gene_res_list_df$hiPS6_org_crispri_g2$log2FoldChange) > 1 & gene_res_list_df$hiPS6_org_crispri_g2$padj < 0.05),],
-"hiPS6_org_crispri_g3" = gene_res_list_df$hiPS6_org_crispri_g3[which(abs(gene_res_list_df$hiPS6_org_crispri_g3$log2FoldChange) > 1 & gene_res_list_df$hiPS6_org_crispri_g3$padj < 0.05),],
-"hiPS6_org_crispri_g3_batch2" = gene_res_list_df$hiPS6_org_crispri_g3_batch2[which(abs(gene_res_list_df$hiPS6_org_crispri_g3_batch2$log2FoldChange) > 1 & gene_res_list_df$hiPS6_org_crispri_g3_batch2$padj < 0.05),],
-"hiPS48_org_crispri_g3" = gene_res_list_df$hiPS48_org_crispri_g3[which(abs(gene_res_list_df$hiPS48_org_crispri_g3$log2FoldChange) > 1 & gene_res_list_df$hiPS48_org_crispri_g3$padj < 0.05),]), file = "/Volumes/MyPassport/CRISPRi_L1s/results/tables/genes_bulkRNA_DEA_crispri.xlsx")
 
 volcano_plots_list <- list()
 mean_plots_list <- list()
@@ -355,21 +325,12 @@ for(i in names(gene_res_list)){
 }
 
 order <- c("hiPS6_crispri_g1",
-"hiPS6_crispri_g2",
 "hiPS6_crispri_g3",
 "hiPS48_crispri_g3",
-"NES_crispra_g1",
-"NES_crispra_g2",
-"NES_crispra_g3",
 "hiPS6_org_crispri_g1",
-"hiPS6_org_crispri_g2",
 "hiPS48_org_crispri_g3",
 "hiPS6_org_crispri_g3_batch2",
-"hiPS6_org_crispri_g3",
-"hiPS6_org_crispra_g1",
-"hiPS6_org_crispra_g2",
-"hiPS6_org_crispra_g3",
-"hiPS6_org_crispra_g3_batch2")
+"hiPS6_org_crispri_g3")
 
 # pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/genes_volcano_plots.pdf", height = 4, width = 7)
 volcano_plots_list
@@ -436,48 +397,21 @@ for( g in names(gse_list)){
 # pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/GSEA_top20_padj/hiPS6_org_crispri_g1_gsea.pdf", width = 7)
 top20_gsea$hiPS6_org_crispri_g1
 # dev.off()
-# pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/GSEA_top20_padj/hiPS6_org_crispri_g2_gsea.pdf", width = 8)
-top20_gsea$hiPS6_org_crispri_g2
-# dev.off()
 # pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/GSEA_top20_padj/hiPS6_org_crispri_g3_gsea.pdf", width = 8)
 top20_gsea$hiPS6_org_crispri_g3
 # dev.off()
 # pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/GSEA_top20_padj/hiPS6_org_crispri_g3_batch2_gsea.pdf", width = 7)
 top20_gsea$hiPS6_org_crispri_g3_batch2
 # dev.off()
-# pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/GSEA_top20_padj/hiPS6_org_crispra_g1_gsea.pdf", width = 12)
-top20_gsea$hiPS6_org_crispra_g1
-# dev.off()
-# pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/GSEA_top20_padj/hiPS6_org_crispra_g2_gsea.pdf", width = 12)
-top20_gsea$hiPS6_org_crispra_g2
-# dev.off()
-# pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/GSEA_top20_padj/hiPS6_org_crispra_g3_gsea.pdf", width = 12)
-top20_gsea$hiPS6_org_crispra_g3
-# dev.off()
-# pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/GSEA_top20_padj/hiPS6_org_crispra_g3_batch2_gsea.pdf", width = 7)
-top20_gsea$hiPS6_org_crispra_g3_batch2
-# dev.off()
 # pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/GSEA_top20_padj/hiPS48_org_crispri_g3_gsea.pdf", width = 8)
 top20_gsea$hiPS48_org_crispri_g3
 # dev.off()
 
 gse_list_df <- list("hiPS6_crispri_g1" = gse_list$hiPS6_crispri_g1@result,
-                    "hiPS6_crispri_g2" = gse_list$hiPS6_crispri_g2@result,
                     "hiPS6_crispri_g3" = gse_list$hiPS6_crispri_g3@result,
-                    # "hiPS48_g3" = gse_list$hiPS48_crispri_g3@result,
-                    "NES_crispra_g1" = gse_list$NES_crispra_g1@result,
-                    "NES_crispra_g2" = gse_list$NES_crispra_g2@result,
-                    "NES_crispra_g3" = gse_list$NES_crispra_g3@result,
                     "hiPS6_org_crispri_g1" = gse_list$hiPS6_org_crispri_g1@result,
-                    "hiPS6_org_crispri_g2" = gse_list$hiPS6_org_crispri_g2@result,
                     "hiPS6_org_crispri_g3" = gse_list$hiPS6_org_crispri_g3@result,
-                    "hiPS6_org_crispri_g3_batch2" = gse_list$hiPS6_org_crispri_g3_batch2@result,
-                    # "hiPS48_crispri_g3" = gse_list$hiPS48_crispri_g3@result,
-                    "hiPS6_org_crispra_g1" = gse_list$hiPS6_org_crispra_g1@result,
-                    "hiPS6_org_crispra_g2" = gse_list$hiPS6_org_crispra_g2@result,
-                    "hiPS6_org_crispra_g3" = gse_list$hiPS6_org_crispra_g3@result,
-                    "hiPS6_org_crispra_g3_batch2" = gse_list$hiPS6_org_crispra_g3_batch2@result
-                    )
+                    "hiPS6_org_crispri_g3_batch2" = gse_list$hiPS6_org_crispri_g3_batch2@result)
 
 for(i in names(gse_list_df)){
   gse_list_df[[i]]$sign <- ifelse(gse_list_df[[i]]$enrichmentScore > 0, "Activated", "Supressed")
@@ -488,7 +422,7 @@ for(i in names(gse_list_df)){
   gse_list_df[[i]]$Description <- factor(gse_list_df[[i]]$Description, levels= gse_list_df[[i]][order(gse_list_df[[i]]$gene_ratio, decreasing = F),"Description"])
 }
 
-# openxlsx::write.xlsx(gse_list_df, "/Volumes/MyPassport/CRISPRi_L1s/results/tables/genes_GSEA.xlsx")
+openxlsx::write.xlsx(gse_list_df, "/Volumes/MyPassport/CRISPRi_L1s/bulk/results/tables/genes_GSEA_crispri.xlsx")
 
 ```
 
