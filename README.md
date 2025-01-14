@@ -8,7 +8,11 @@ development*
 - `bulk` - Containing all scripts for bulk RNA sequencing CUT&RUN analysis.
 - `10X` - Containing all scripts for single nuclei RNA sequencing analysis.
 
-### For `bulk` datasets:
+### For `bulk` datasets: 
+*WARNING: Please note that the gRNAs in the bulk datasets are named differently in the samplesheet and scripts! However, I HAVE fixed the names in the output files / tables.*
+
+*For the scripts and samplesheets: gRNA3 in the sample names and samplesheet is "gRNA1" in the manuscript. gRNA1 in the sample names and samplesheet is "gRNA2" in the manuscript.*
+
 - `src` - Directory containing all pipelines and scripts:
 	- [**Snakefile_bulkRNAseq**](./bulk/src/Snakefile_bulkRNAseq) - Snakemake pipeline to preprocess bulk RNAseq data.
 	- [**Snakefile_cutnrun**](./bulk/src/Snakefile_cutnrun) - Snakemake pipeline to preprocess CUT&RUN datasets.
