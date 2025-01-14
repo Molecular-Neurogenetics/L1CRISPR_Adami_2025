@@ -61,7 +61,6 @@ development*
 
 
 ### For `10X` datasets:
-- [**crispri.rds**](./10X/crispri.rds) - Seurat object for L1-CRISPRi and LacZ day 15 organoids.
 - `src` - Directory containing all pipelines and scripts:
 	- [**MN07_CRISPRi_org_res0_1.py**](./10X/src/MN07_CRISPRi_org_res0_1.py) - trusTEr script to quantify TEs per sample.
 	- `r_scripts` - Directory containing all R markdowns for the visualization and statistical analysis:
