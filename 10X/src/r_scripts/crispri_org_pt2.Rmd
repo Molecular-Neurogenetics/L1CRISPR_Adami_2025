@@ -18,6 +18,7 @@ Including previously defined cell types (see crispri_org.Rmd), batch, cell line,
 ```{r}
 library(data.table)
 library(openxlsx)
+library(tidyverse)
 library(Seurat)
 library(stringr)
 library(ggpubr)
@@ -257,7 +258,7 @@ downreg_0_only <- downreg_0[which(!(downreg_0$V1 %in% downreg_0_threshold) &
                                 !(deas_clusters$g1_hiPS48$`1`[downreg_0$V1, "avg_log2FC"] < 0) &
                                 !(deas_clusters$g2_hiPS48$`1`[downreg_0$V1, "avg_log2FC"] < 0) &
                                 
-                                (deas_clusters$g1_hiPS6$`0`[downreg_0$V1, "1_g1_hiPS6_avg_log2FC"] < -0.25) &
+                                (deas_clusters$g1_hiPS6$`0`[downreg_0$V1, "0_g1_hiPS6_avg_log2FC"] < -0.25) &
                                 (deas_clusters$g2_hiPS6$`0`[downreg_0$V1, "avg_log2FC"] < 0) &
                                 (deas_clusters$g1_hiPS48$`0`[downreg_0$V1, "avg_log2FC"] < 0) &
                                 (deas_clusters$g2_hiPS48$`0`[downreg_0$V1, "avg_log2FC"] < 0)  ),]
@@ -319,7 +320,7 @@ cluster_0_1_deg_df_dcast[is.na(cluster_0_1_deg_df_dcast)] <- 0
 rownames(cluster_0_1_deg_df_dcast) <- cluster_0_1_deg_df_dcast$gene
 cluster_0_1_deg_df_dcast <- cluster_0_1_deg_df_dcast[,-1]
 
-bk_neg <- seq(-20,0, length.out=50)
+bk_neg <- seq(-16,0, length.out=50)
 bk_pos <- seq(0,3.5, length.out=50)
 bk <- c(bk_neg, bk_pos)
 bk <- unique(bk)
@@ -380,6 +381,8 @@ dotplot(go_enrich_downreg_cluster_0_1, showCategory = 50) + ggtitle("Downregulat
 # saveRDS(list("upreg_cluster_0_1" = go_enrich_upreg_cluster_0_1@result,
 #                 "downreg_cluster_0_1" = go_enrich_downreg_cluster_0_1@result),
 #         "/Volumes/MyPassport/CRISPRi_L1s/10X/src/r_scripts/goenrich_cluster_0_1_cluster.rds")
+
+go_cluster_0_1 <- readRDS("/Volumes/MyPassport/CRISPRi_L1s/10X/src/r_scripts/goenrich_cluster_0_1_cluster.rds")
 # 
 # write.xlsx(list("upreg_cluster_0_1" = go_enrich_upreg_cluster_0_1@result,
 #                 "downreg_cluster_0_1" = go_enrich_downreg_cluster_0_1@result), "/Volumes/MyPassport/CRISPRi_L1s/10X/results/tables/goenrich_cluster_0_1_cluster.xlsx")
@@ -388,7 +391,7 @@ dotplot(go_enrich_downreg_cluster_0_1, showCategory = 50) + ggtitle("Downregulat
 
 ## Examples of upregulated genes among all experiments (violins)
 ```{r}
-genes_enrichment_eg <- unique(unlist(str_split(go_enrich_upreg_cluster_0_1@result$geneID, "/")))
+genes_enrichment_eg <- c("AKAP6", "NTRK2", "TOX", "SCN3A", "EPHA3", "GRIK1", "ADCY2", "FAT4", "UQCRFS1")#unique(unlist(str_split(go_enrich_upreg_cluster_0_1@result$geneID, "/")))
 examples_crispri_upreg <- reshape2::melt(FetchData(crispri_org_join, c(genes_enrichment_eg,"cell_line", "condition", "seurat_clusters", "condition_cell_line_cluster_batch"))) %>% 
   # filter(value > 0) %>% 
   filter(seurat_clusters %in% c("0", "1"))
@@ -426,5 +429,13 @@ violin_padj(examples_crispri_upreg, "ADCY2")
 violin_padj(examples_crispri_upreg, "FAT4")
 violin_padj(examples_crispri_upreg, "UQCRFS1")
 # dev.off()
+
+tmp <- subset(crispri_org_join, seurat_clusters %in% c("0", "1") & crispri_org_join$condition_cell_line %in% c("LacZ_hiPS48", "gRNA1_hiPS48"))
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/vln_upreg_genes_cluster_0_1_examples_hiPS48_g1.pdf", height = 10, width = 4)
+ggarrange(VlnPlot(tmp, "ADCY2", group.by = "seurat_clusters", split.by = "condition"),
+VlnPlot(tmp, "TOX", group.by = "seurat_clusters", split.by = "condition"),
+VlnPlot(tmp, "AKAP6", group.by = "seurat_clusters", split.by = "condition"), ncol=1, nrow=3)
+dev.off()
 ```
 
