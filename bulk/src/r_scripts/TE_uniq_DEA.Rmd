@@ -711,3 +711,72 @@ ggplot(FL_L1HS_L1PA4_norm_LacZ_org_melt_expressed_bed[which(FL_L1HS_L1PA4_norm_L
 # dev.off()
 ```
 
+## Is there any evidence of H3K9me3 spread? 
+### A good proxy for that effect is the effect on gene expression with a sense-L1, as this ignores the effect of the antisense promoter.
+```{r}
+# Are all the ones we have managed to target (in either guides)
+L1_DEA_crispri_iPSC
+
+# These are all the genic L1s that we have managed to downregulate
+targeted_L1_protein_genes
+
+# These are the genes with a sense-L1. Let's check if these L1s are intronic
+tmp <- unique(targeted_L1_protein_genes[which(targeted_L1_protein_genes$orientation == "sense"), "gene_name"])
+
+# write.table(tmp, "/Volumes/MyPassport/CRISPRi_L1s/bulk/results/tables/downreg_L1s_intersecting_gene_sense.tab",  sep="\t", quote=F, col.names = F, row.names = F)
+
+# Intersecting exons from those that intersect a gene?
+downreg_L1s_intersect_gene_intersect_exons <- read.table("/Volumes/MyPassport/CRISPRi_L1s/bulk/results/tables/downreg_L1s_intersecting_gene_sense_intersect_exons.tab")
+
+colnames(downreg_L1s_intersect_gene_intersect_exons) <- c("exon_chr", "exon_start", "exon_end", "exon_id", "exon_strand", "exon_dot", "exon_gene_name", "TE_chr", "TE_start", "TE_end", "TE_id", "TE_dot", "TE_strand", "TE_info", "overlap")
+
+# Summarize by gene name if there is any intersection in an exon 
+downreg_L1s_intersect_gene_intersect_exons_summary <- as.data.frame(table(downreg_L1s_intersect_gene_intersect_exons$exon_gene_name, ifelse(downreg_L1s_intersect_gene_intersect_exons$overlap > 0, "exonic", "intronic")))
+
+# Checking that we have information of all L1s with a gene overlap
+table(tmp %in% downreg_L1s_intersect_gene_intersect_exons$exon_gene_name)
+
+downreg_L1s_intersect_gene_intersect_exons_summary <- downreg_L1s_intersect_gene_intersect_exons_summary %>% 
+  filter(Freq != 0) %>% 
+  filter(Var1 %in% tmp)
+downreg_L1s_intersect_gene_intersect_exons_summary$Var2 <- factor(downreg_L1s_intersect_gene_intersect_exons_summary$Var2, levels = c("exonic", "intronic"))
+downreg_L1s_intersect_gene_intersect_exons_summary$Var1 <- as.character(downreg_L1s_intersect_gene_intersect_exons_summary$Var1)
+
+downreg_L1s_intersect_gene_intersect_exons_summary <- downreg_L1s_intersect_gene_intersect_exons_summary[order(downreg_L1s_intersect_gene_intersect_exons_summary$Var2),]
+
+downreg_L1s_intersect_gene_intersect_exons_summary[which(duplicated(downreg_L1s_intersect_gene_intersect_exons_summary$Var1)), "Freq"] <- "*"
+
+downreg_L1s_intersect_gene_intersect_exons_summary <- downreg_L1s_intersect_gene_intersect_exons_summary[which(downreg_L1s_intersect_gene_intersect_exons_summary$Freq != "*"),]
+
+ggplot(downreg_L1s_intersect_gene_intersect_exons_summary, aes(x=Var2)) + geom_bar(stat="count") + theme_bw() + labs(x="", y="Count") + ggtitle("Downregulated L1s overlapping with\na gene in sense (intronic vs exonic)\nGencode v38")
+
+# Downregulated L1s in introns and in-sense with genes 
+tmp <- downreg_L1s_intersect_gene_intersect_exons_summary[which(downreg_L1s_intersect_gene_intersect_exons_summary$Var2 == "intronic"), "Var1"]
+
+gene_dea_hips <- list()
+gene_dea_hips[["hiPS6_crispri_g1"]] <- openxlsx::read.xlsx("/Volumes/MyPassport/CRISPRi_L1s/bulk/results/tables/genes_DEA_crispri.xlsx", sheet = "hiPS6_crispri_g1")
+gene_dea_hips[["hiPS6_crispri_g2"]] <- openxlsx::read.xlsx("/Volumes/MyPassport/CRISPRi_L1s/bulk/results/tables/genes_DEA_crispri.xlsx", sheet = "hiPS6_crispri_g2")
+gene_dea_hips[["hiPS48_crispri_g1"]] <- openxlsx::read.xlsx("/Volumes/MyPassport/CRISPRi_L1s/bulk/results/tables/genes_DEA_crispri.xlsx", sheet = "hiPS48_crispri_g1")
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/bulk/results/plots/bar_dowreg_L1_intronic_sense_intercept_gene.pdf", width = 7, height = 4)
+gene_dea_hips$hiPS6_crispri_g1 %>% 
+  filter(gene_name %in% tmp) %>% 
+  filter(gene_name != "GJB7") %>% # With a 5998bp L1PA3 
+  mutate(sig = ifelse(is.na(padj), "Not significant", ifelse(padj < 0.05, "Significant", "Not significant" ))) %>% 
+  ggplot(aes(x=gene_name, y=log2FoldChange, fill = sig)) + geom_bar(stat="identity") + labs(fill = "", x = "") + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + ggtitle("Genes overlapping a downregulated intronic/sense L1 (Guide 1 hiPS6)") + lims(y = c(-0.5, 1.5)) + geom_hline(yintercept = 0, linetype="dashed")
+
+gene_dea_hips$hiPS6_crispri_g2 %>% 
+  filter(gene_name %in% tmp) %>% 
+  filter(gene_name != "GJB7") %>% # With a 5998bp L1PA3 
+  mutate(sig = ifelse(is.na(padj), "Not significant", ifelse(padj < 0.05, "Significant", "Not significant" ))) %>% 
+  ggplot(aes(x=gene_name, y=log2FoldChange, fill = sig)) + geom_bar(stat="identity") + labs(fill = "", x = "") + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + ggtitle("Genes overlapping a downregulated intronic/sense L1 (Guide 2 hiPS6)") + lims(y = c(-1.5, 1.5)) + geom_hline(yintercept = 0, linetype="dashed")
+
+gene_dea_hips$hiPS48_crispri_g1 %>% 
+  filter(gene_name %in% tmp) %>% 
+  filter(gene_name != "GJB7") %>% # With a 5998bp L1PA3 
+  mutate(sig = ifelse(is.na(padj), "Not significant", ifelse(padj < 0.05, "Significant", "Not significant" ))) %>% 
+  ggplot(aes(x=gene_name, y=log2FoldChange, fill = sig)) + geom_bar(stat="identity") + labs(fill = "", x = "") + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + ggtitle("Genes overlapping a downregulated intronic/sense L1 (Guide 1 hiPS48)") + lims(y = c(-0.5, 1.5)) + geom_hline(yintercept = 0, linetype="dashed")
+dev.off()
+
+```
+
