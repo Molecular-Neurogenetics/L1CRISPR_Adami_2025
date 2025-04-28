@@ -158,6 +158,33 @@ for(i in 1:length(samples)){
 
 ```
 
+## Aggregated subfamily expression in RPKM
+```{r}
+mapped_reads <- fread("/Volumes/MyPassport/CRISPRi_L1s/bulk/mapped_reads.txt", data.table = F) #Total mapped reads per sample
+rownames(mapped_reads) <- mapped_reads$sample
+
+te_counts_mtx <- as.matrix(te_counts[,samples])
+te_lengths <- te_counts[,"Length"]
+te_counts_mtx_rpkm <- (10^9)*t(t(te_counts_mtx/te_lengths)/mapped_reads[samples, "uniquely_mapped_reads"]) # RPKM
+
+FL_L1PA_counts_mtx_rpkm <- te_counts_mtx_rpkm[which(rownames(te_counts_mtx_rpkm) %in% FL_L1PA_annotation$TE_id),]
+FL_L1PA_counts_rpkm <- as.data.frame(FL_L1PA_counts_mtx_rpkm)
+FL_L1PA_counts_rpkm$TE_id <- rownames(FL_L1PA_counts_rpkm)
+FL_L1PA_counts_rpkm$TE_subfam <- sapply(str_split(FL_L1PA_counts_rpkm$TE_id, "_dup"), `[[`, 1)
+FL_L1PA_counts_rpkm$TE_subfam <- paste(FL_L1PA_counts_rpkm$TE_subfam, paste("\n(n = ", paste(table(FL_L1PA_counts_rpkm$TE_subfam)[FL_L1PA_counts_rpkm$TE_subfam], ")", sep=""), sep=""), sep="")
+samplesheet_WT <- samplesheet[which(samplesheet$LV == "WT"),]
+
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/bulk/results/plots/lineplot_L1s_RPKM_sum_WT_hiPSC.pdf", height = 4, width = 7)
+reshape2::melt(aggregate(FL_L1PA_counts_rpkm[, samplesheet_WT$samples], by=list(FL_L1PA_counts_rpkm$TE_subfam), FUN=sum)) %>% 
+  mutate(cellline = ifelse(grepl("h48", variable), "hiPS48", "hiPS6")) %>% 
+  ggplot(aes(x=Group.1, y=value, color = cellline, group = interaction(cellline, variable),)) + 
+  geom_point(pch = 21, position = position_dodge()) +
+  geom_line() +
+  theme_bw() + labs(y="Summed RPKM of expressed elements", x="") 
+# dev.off()  
+```
+
+
 ## TE DEA
 As there are quite a bit of comparisons to be made (one per experiment, per guide), I looped this.
 ```{r}
