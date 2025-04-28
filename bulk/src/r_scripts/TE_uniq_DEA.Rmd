@@ -298,6 +298,23 @@ dev.off()
 
 ```
 
+## Overlapping downregulated elements between guide 3 and guide 1
+```{r}
+FL_L1PA_res_hiPS6_crispri_g3 <- te_res_list_df$hiPS6_crispri_g3[which(te_res_list_df$hiPS6_crispri_g3$TE_id %in% FL_L1PA_annotation$TE_id),]
+FL_L1PA_res_hiPS6_crispri_g3$type <- "hiPS6_crispri_g3"
+colnames(FL_L1PA_res_hiPS6_crispri_g3)[2] <- "log2FC_hiPS6_crispri_g3"
+
+FL_L1PA_res_hiPS6_crispri_g1 <- te_res_list_df$hiPS6_crispri_g1[which(te_res_list_df$hiPS6_crispri_g1$TE_id %in% FL_L1PA_annotation$TE_id),]
+FL_L1PA_res_hiPS6_crispri_g1$type <- "hiPS6_crispri_g1"
+colnames(FL_L1PA_res_hiPS6_crispri_g1)[2] <- "log2FC_hiPS6_crispri_g1"
+
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/bulk/results/plots/upset_downreg_L1s.pdf", height = 4, width = 4)
+upset(fromList(list("g1" = FL_L1PA_res_hiPS6_crispri_g1[which(FL_L1PA_res_hiPS6_crispri_g1$log2FC_hiPS6_crispri_g1 < 0),"TE_id"],
+"g3" = FL_L1PA_res_hiPS6_crispri_g3[which(FL_L1PA_res_hiPS6_crispri_g3$log2FC_hiPS6_crispri_g3 < 0),"TE_id"])))
+# dev.off()
+```
+
+
 ## Saving L1 DEA to an excel file (DESeq2 res) and BED file of DE L1s
 ```{r}
 L1_dysreg_hiPS6_crispri_g1 <- te_res_list_df$hiPS6_crispri_g1[which(te_res_list_df$hiPS6_crispri_g1$padj < 0.05 & te_res_list_df$hiPS6_crispri_g1$log2FoldChange < -1 & te_res_list_df$hiPS6_crispri_g1$TE_id %in% FL_L1PA_annotation$TE_id),]
