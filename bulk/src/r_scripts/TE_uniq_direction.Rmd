@@ -231,6 +231,80 @@ dev.off()
 save.image("/Volumes/MyPassport/CRISPRi_L1s/src/r_scripts/TE_uniq_direction.Rdata")
 ```
 ```{r}
+i <- "hiPS6_crispri"
+comparison <- rbind(samplesheet_comparisons$hiPS6_crispri_g1,
+                    samplesheet_comparisons$hiPS6_crispri_g3)
+te_counts_sample_tmp <- L1PA_sense_te_counts_aggr_TEsubfam_melt[which(L1PA_sense_te_counts_aggr_TEsubfam_melt$variable %in% c(paste(comparison$samples, "_sense", sep=""), paste(comparison$samples, "_antisense", sep=""))),]
+te_counts_sample_tmp$samples <- str_remove_all(te_counts_sample_tmp$variable, "_sense")
+te_counts_sample_tmp$samples <- str_remove_all(te_counts_sample_tmp$sample, "_antisense")
+te_counts_sample_tmp <- merge(te_counts_sample_tmp, comparison, by="samples")
 
+for(L1 in c("L1HS", "L1PA2", "L1PA3")){
+    te_counts_sample_L1_tmp <- te_counts_sample_tmp[which(te_counts_sample_tmp$Group.1 == L1),]
+    max_lim <- max(te_counts_sample_L1_tmp$value) + mean(te_counts_sample_L1_tmp$value)/2
+    control_df <- te_counts_sample_L1_tmp[which(te_counts_sample_L1_tmp$guide == "LacZ"), ]
+    control_df$guide <- "Control"
+    control_df$direction_guide <- paste(control_df$direction, control_df$guide, sep="\n")
+    g1_df <- te_counts_sample_L1_tmp[which(te_counts_sample_L1_tmp$guide == "g1"), ]
+    g1_df$direction_guide <- paste(g1_df$direction, g1_df$guide, sep="\n")
+    g3_df <- te_counts_sample_L1_tmp[which(te_counts_sample_L1_tmp$guide == "g3"), ]
+    g3_df$direction_guide <- paste(g3_df$direction, g3_df$guide, sep="\n")
+    df <- rbind(control_df, g1_df, g3_df)
+    
+    control_df_stats <- data_summary(df[which(grepl("Control", df$direction_guide)),], varname="value", groupnames=c("direction"))
+    control_df_stats$direction_guide <- paste(control_df_stats$direction, "Control", sep="\n")
+    g1_df_stats <- data_summary(df[which(grepl("g1", df$direction_guide)),], varname="value", groupnames=c("direction"))
+    g1_df_stats$direction_guide <- paste(g1_df_stats$direction, "g1", sep="\n")    
+    g3_df_stats <- data_summary(df[which(grepl("g3", df$direction_guide)),], varname="value", groupnames=c("direction"))
+    g3_df_stats$direction_guide <- paste(g3_df_stats$direction, "g3", sep="\n")    
+    
+    
+    df$direction_guide <- factor(df$direction_guide, levels = c("Antisense\nControl", "Sense\nControl",
+                                                                "Antisense\ng3", "Sense\ng3",
+                                                                "Antisense\ng1", "Sense\ng1"))
+    control_df_stats$direction_guide <- factor(control_df_stats$direction_guide, levels = c("Antisense\nControl", "Sense\nControl",
+                                                                "Antisense\ng3", "Sense\ng3",
+                                                                "Antisense\ng1", "Sense\ng1"))
+    g1_df_stats$direction_guide <- factor(g1_df_stats$direction_guide, levels = c("Antisense\nControl", "Sense\nControl",
+                                                                "Antisense\ng3", "Sense\ng3",
+                                                                "Antisense\ng1", "Sense\ng1"))
+    g3_df_stats$direction_guide <- factor(g3_df_stats$direction_guide, levels = c("Antisense\nControl", "Sense\nControl",
+                                                                "Antisense\ng3", "Sense\ng3",
+                                                                "Antisense\ng1", "Sense\ng1"))
+    
+    sense_boxplots[[i]][[L1]] <-
+      ggplot(data = df, aes(x=direction_guide, y=value)) +
+      geom_bar(data = control_df_stats, aes(x=direction_guide, y=value, fill=direction), stat="identity", alpha=0.7, width = 0.7) +
+      geom_bar(data = g3_df_stats, aes(x=direction_guide, y=value, fill=direction), stat="identity", alpha=0.7, width = 0.7) +
+      geom_bar(data = g1_df_stats, aes(x=direction_guide, y=value, fill=direction), stat="identity",  alpha=0.7, width = 0.7) +
+      geom_errorbar(data = control_df_stats, aes(ymin=value-sd, ymax=value+sd, color=direction), alpha=0.8, width=.2,position=position_dodge(0.9)) +
+      geom_errorbar(data = g3_df_stats, aes(ymin=value-sd, ymax=value+sd, color=direction), alpha=0.8, width=.2,position=position_dodge(0.9)) +
+      geom_errorbar(data = g1_df_stats, aes(ymin=value-sd, ymax=value+sd, color=direction), alpha=0.8, width=.2,position=position_dodge(0.9)) +
+      geom_line(data = control_df, aes(x=direction_guide, group=samples), alpha = 0.3) +
+      geom_line(data = g3_df, aes(x=direction_guide, group=samples), alpha = 0.3) +
+      geom_line(data = g1_df, aes(x=direction_guide, group=samples), alpha = 0.3) +
+      geom_point(data = control_df, aes(x=direction_guide), color="black", alpha=0.7) +
+      geom_point(data = g3_df, aes(x=direction_guide), color="black", alpha=0.7) +
+      geom_point(data = g1_df, aes(x=direction_guide), color="black", alpha=0.7) +
+      stat_compare_means(comparisons = list(c("Antisense\nControl", "Sense\nControl"),
+                                            c("Antisense\ng1", "Sense\ng1"),
+                                            c("Antisense\ng3", "Sense\ng3")), label = "p.format", method = "t.test", paired=T, label.y = max(df$value)+ 2*sd(df$value)) +
+    stat_compare_means(comparisons = list(c("Antisense\nControl", "Antisense\ng1"),
+                                            c("Antisense\ng3", "Antisense\nControl"),
+                                          c("Sense\nControl", "Sense\ng1"),
+                                            c("Sense\ng3", "Sense\nControl")), label = "p.format", method = "t.test", paired=F) +
+      theme_bw() + labs(x="", y="Accumulated expression", fill="") + 
+        ggtitle(paste(i, ":", L1)) + 
+        theme(panel.grid.major = element_blank(), 
+              panel.grid.minor = element_blank(), 
+              plot.title = element_text(size = 6),
+              legend.position = "None")
+    
+}
+pdf("/Volumes/MyPassport/CRISPRi_L1s/bulk/results/plots/barplots_direction_guides.pdf", height = 4, width = 5)
+sense_boxplots$hiPS6_crispri$L1HS
+sense_boxplots$hiPS6_crispri$L1PA2
+sense_boxplots$hiPS6_crispri$L1PA3
+dev.off()
 ```
 

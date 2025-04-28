@@ -12,6 +12,7 @@ Before we start, I load libraries and define some helper functions to visualize 
 ## Functions
 
 ```{r class.source = 'fold-hide'}
+library(tidyverse)
 library(data.table)
 library(ggplot2)
 library(ggpubr)
