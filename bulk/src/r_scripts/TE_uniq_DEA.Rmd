@@ -587,15 +587,17 @@ FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed <- FL_L1HS_L1PA4_id_norm_WT_hiPSC_e
 
 ### Genic vs Intergenic
 ```{r}
-expressed_L1_protein_genes <- read.table("/Volumes/MyPassport/CRISPRi_L1s/results/tables/FL_L1PA_WT_hiPSC_expressed_intersect_protein_genes.bed")
+expressed_L1_protein_genes <- read.table("/Volumes/MyPassport/CRISPRi_L1s/bulk/results/tables/FL_L1PA_WT_hiPSC_expressed_intersect_protein_genes.bed")
 colnames(expressed_L1_protein_genes) <- c("gene_chr", "gene_start", "gene_end", "gene_name", "dot", "gene_strand", 
                                          "TE_chr", "TE_start", "TE_end", "TE_id", "dot2", "TE_strand", "overlap")
+expressed_L1_protein_genes$orientation <- ifelse(expressed_L1_protein_genes$gene_strand == expressed_L1_protein_genes$TE_strand, "sense","antisense")
 
 FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed$genic <- ifelse(FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed$Geneid %in% expressed_L1_protein_genes$TE_id, "genic", "intergenic")
 FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed$TE_subfamily <- sapply(str_split(FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed$Geneid, "_dup"), `[[`, 1)
+FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed <- merge(FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed, unique(expressed_L1_protein_genes[,c("TE_id", "orientation"), drop=F]), by.x="Geneid", by.y="TE_id", all.x=T)
 
-# pdf("/Volumes/MyPassport/CRISPRi_L1s/results/plots/expressed_L1HS_L1PA4_genic_FL_L1_WT_iPSC.pdf", height = 4, width = 6)
-ggplot(FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed, aes(x=TE_subfamily, fill=genic)) + geom_histogram(stat="count") + theme_bw() + theme(text = element_text(size=15), panel.grid.minor = element_blank(), panel.grid.major = element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))  + ggtitle("WT iPSC: Expressed FL L1HS-L1PA4\nGenic / intergenic") + labs(x="") + lims(y=c(0, 1000))
+# pdf("/Volumes/MyPassport/CRISPRi_L1s/bulk/results/plots/expressed_L1HS_L1PA4_genic_orientation_FL_L1_WT_iPSC.pdf", height = 4, width = 6)
+ggplot(FL_L1HS_L1PA4_id_norm_WT_hiPSC_expressed_bed, aes(x=TE_subfamily, fill=orientation)) + geom_histogram(stat="count") + theme_bw() + theme(text = element_text(size=15), panel.grid.minor = element_blank(), panel.grid.major = element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))  + ggtitle("WT iPSC: Expressed FL L1HS-L1PA4\nGenic / intergenic") + labs(x="") + lims(y=c(0, 1000)) + facet_wrap(.~genic)
 # dev.off()
 ```
 
