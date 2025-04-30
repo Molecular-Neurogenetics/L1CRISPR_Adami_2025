@@ -441,6 +441,15 @@ dev.off()
 
 ```
 
+## Number of nuclei per condition and cluster
+
+```{r}
+crispri_cluster_n <- reshape2::melt(FetchData(crispri_org_join, c("cell_line", "condition", "seurat_clusters", "condition_cell_line_cluster_batch")))
+
+tmp <- crispri_cluster_n[,c("cell_line", "seurat_clusters", "condition")]
+write.xlsx(as.data.frame(table(tmp$cell_line, tmp$seurat_clusters, tmp$condition)), "/Volumes/MyPassport/CRISPRi_L1s/10X/results/tables/crispri_org_nuclei_cluster_condition.xlsx")
+
+```
 
 ## Percentage of nuclei expressing pluripotency markers
 ```{r}
