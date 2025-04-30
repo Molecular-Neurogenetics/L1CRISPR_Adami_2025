@@ -437,5 +437,32 @@ ggarrange(VlnPlot(tmp, "ADCY2", group.by = "seurat_clusters", split.by = "condit
 VlnPlot(tmp, "TOX", group.by = "seurat_clusters", split.by = "condition"),
 VlnPlot(tmp, "AKAP6", group.by = "seurat_clusters", split.by = "condition"), ncol=1, nrow=3)
 dev.off()
+
+
+```
+
+
+## Percentage of nuclei expressing pluripotency markers
+```{r}
+clusters_per_cell <- FetchData(crispri_org, c("seurat_clusters", "condition"))
+clusters_per_cell$barcode <- rownames(clusters_per_cell)
+celltypes_per_cell <- merge(coldata_celltypes, clusters_per_cell, by.x="value", by.y="seurat_clusters")
+colnames(celltypes_per_cell)[2] <- "celltype"
+rownames(celltypes_per_cell) <- celltypes_per_cell$barcode
+celltypes_per_cell$cluster_celltype_condition <- paste(celltypes_per_cell$value, paste(celltypes_per_cell$celltype, celltypes_per_cell$condition, sep="_"), sep="_")
+crispri_org <- AddMetaData(crispri_org, metadata = celltypes_per_cell[,c("cluster_celltype_condition"), drop=F], col.name = "cluster_celltype_condition")
+
+plt <- DotPlot(crispri_org, c("POU5F1", "SOX2", "NANOG" ), group.by = "cluster_celltype_condition")
+pluripotent_markers <- plt$data[which(plt$data$features.plot != "SOX2"),c("id", "features.plot", "avg.exp", "pct.exp")]
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/bar_perc_nuclei_pluripotency.pdf", height = 4, width = 6)
+pluripotent_markers %>% 
+  filter(features.plot == "NANOG") %>% 
+  ggplot(aes(x=id, y=avg.exp*100, fill = avg.exp)) + geom_bar(stat="identity") + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + labs(y="Percentage of nuclei in cluster\nexpressing NANOG (%)", x="", fill="Average\nExpression") + scale_y_continuous(limits=c(0,100), breaks = c(0,10,50,100))
+
+pluripotent_markers %>% 
+  filter(features.plot == "POU5F1") %>% 
+  ggplot(aes(x=id, y=avg.exp*100, fill = avg.exp)) + geom_bar(stat="identity") + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + labs(y="Percentage of nuclei in cluster\nexpressing POU5F1 (%)", x="", fill="Average\nExpression") + scale_y_continuous(limits=c(0,100), breaks = c(0,10,50,100))
+dev.off()
 ```
 
