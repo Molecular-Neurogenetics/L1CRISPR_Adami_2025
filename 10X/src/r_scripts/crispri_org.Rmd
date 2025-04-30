@@ -316,9 +316,10 @@ for(experiment in names(experiments)){
 
 # write.xlsx(deas_clusters_bound, "/Volumes/MyPassport/CRISPRi_L1s/10X/results/tables/genes_DEA.xlsx")
 
-# saveRDS(deas_clusters, "/Volumes/MyPassport/CRISPRi_L1s/10X/src/r_scripts/crispri_org_deas_clusters.rds")
-# saveRDS(deas_log2FC, "/Volumes/MyPassport/CRISPRi_L1s/10X/src/r_scripts/crispri_org_deas_log2FC.rds")
 # deas_clusters <- readRDS("/Volumes/MyPassport/CRISPRi_L1s/10X/src/r_scripts/crispri_org_deas_clusters.rds")
+# saveRDS(deas_clusters, "/Volumes/MyPassport/CRISPRi_L1s/10X/src/r_scripts/crispri_org_deas_clusters.rds")
+# deas_log2FC <- readRDS("/Volumes/MyPassport/CRISPRi_L1s/10X/src/r_scripts/crispri_org_deas_log2FC.rds")
+# saveRDS(deas_log2FC, "/Volumes/MyPassport/CRISPRi_L1s/10X/src/r_scripts/crispri_org_deas_log2FC.rds")
 ```
 
 ## Tag genes that have "same" or "opposite" direction to the results on hiPS6 g1
@@ -387,5 +388,14 @@ length(intersect(downreg_0, downreg_1))
 length(intersect(upreg_0, upreg_1))
 ```
 
+```{r}
+
+downreg_0 <- read.table("/Volumes/MyPassport/CRISPRi_L1s/10X/results/tables/downreg_cluster_0.txt")
+downreg_1 <- read.table("/Volumes/MyPassport/CRISPRi_L1s/10X/results/tables/downreg_cluster_1.txt")
+upreg_0 <- read.table("/Volumes/MyPassport/CRISPRi_L1s/10X/results/tables/upreg_cluster_0.txt")
+upreg_1 <- read.table("/Volumes/MyPassport/CRISPRi_L1s/10X/results/tables/upreg_cluster_1.txt")
+
+length(intersect(upreg_0$V1, upreg_1$V1))
+```
 
 

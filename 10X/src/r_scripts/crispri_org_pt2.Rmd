@@ -50,6 +50,7 @@ crispri_org_join <- AddMetaData(crispri_org_join, metadata = celltypes_per_cell[
 cellline_per_cell <- FetchData(crispri_org_join, c("condition", "cell_line", "batch", "celltype", "seurat_clusters"))
 cellline_per_cell$barcode <- rownames(cellline_per_cell)
 cellline_per_cell$condition_cell_line <- paste(cellline_per_cell$condition, cellline_per_cell$cell_line, sep="_")
+cellline_per_cell$condition_cluster <- paste(cellline_per_cell$condition, cellline_per_cell$seurat_clusters, sep="_")
 cellline_per_cell$condition_celltype <- paste(cellline_per_cell$condition, cellline_per_cell$celltype, sep="_")
 cellline_per_cell$condition_cell_line_batch <- paste(cellline_per_cell$condition, cellline_per_cell$cell_line, cellline_per_cell$batch, sep="_")
 crispri_org_join <- AddMetaData(crispri_org_join, metadata = cellline_per_cell[,c("condition_cell_line", "condition_cell_line_batch", "condition_celltype"), drop=F], col.name = c("condition_cell_line", "condition_cell_line_batch", "condition_celltype"))
@@ -57,7 +58,7 @@ cellline_per_cell$condition_cell_line_cluster <- paste(cellline_per_cell$conditi
 cellline_per_cell$condition_cell_line_batch_cluster <- paste(cellline_per_cell$condition_cell_line_batch, cellline_per_cell$seurat_clusters, sep = "_")
 cellline_per_cell$condition_cell_line_celltype <- paste(cellline_per_cell$condition_cell_line, cellline_per_cell$celltype, sep = "_")
 cellline_per_cell$condition_cell_line_batch_celltype <- paste(cellline_per_cell$condition_cell_line_batch, cellline_per_cell$celltype, sep = "_")
-crispri_org_join <- AddMetaData(crispri_org_join, metadata = cellline_per_cell[,c("condition_cell_line_batch_cluster", "condition_cell_line_batch_celltype", "condition_cell_line_cluster", "condition_cell_line_celltype"), drop=F], col.name = c("condition_cell_line_batch_cluster", "condition_cell_line_batch_celltype", "condition_cell_line_cluster", "condition_cell_line_celltype"))
+crispri_org_join <- AddMetaData(crispri_org_join, metadata = cellline_per_cell[,c("condition_cell_line_batch_cluster", "condition_cell_line_batch_celltype", "condition_cluster", "condition_cell_line_cluster", "condition_cell_line_celltype"), drop=F], col.name = c("condition_cell_line_batch_cluster", "condition_cell_line_batch_celltype", "condition_cluster", "condition_cell_line_cluster", "condition_cell_line_celltype"))
 ```
 
 ## Cell cycle
@@ -222,6 +223,81 @@ downreg_1_threshold <- downreg_1[which(deas_clusters$g1_hiPS6$`1`[downreg_1$V1, 
 downreg_both <- unique(downreg_0_threshold[which(downreg_0_threshold %in% downreg_1_threshold)], 
                      downreg_1_threshold[which(downreg_1_threshold %in% downreg_0_threshold)])
 ```
+
+
+```{r}
+library(pheatmap)
+upreg_genes_df <- FetchData(crispri_org_join, c(upreg_both, "condition_cluster","condition", "seurat_clusters", "cell_line", "batch"))
+
+upreg_genes_df <- upreg_genes_df %>% 
+  filter(condition_cluster %in% c("LacZ_0", "LacZ_1", "LacZ_4",
+                                  "gRNA1_0", "gRNA1_1", "gRNA1_4",
+                                  "gRNA2_0", "gRNA2_1", "gRNA2_4")) 
+
+cluster_rows_by_group <- function(df_cluster, group_rows, samplesheet){
+  # Calculate eigen values
+    df_cluster <- t(df_cluster)
+    eigenvalues <- svd(t(scale(df_cluster)),nu=1,nv=1)$v
+    scaledExpr <- scale(df_cluster)
+    averExpr <- rowMeans(scaledExpr, na.rm = TRUE)
+    if(cor(averExpr,eigenvalues) < 0){
+      eigenvalues <- -eigenvalues
+    }
+    index_eigen <- order(eigenvalues)
+    index_eigen <- rownames(df_cluster[index_eigen,])
+    # Add group variable in samplesheet
+    # If more than one, we collapse those columns
+    if(length(group_rows) > 1){
+      samplesheet$Group <- apply(samplesheet[,group_rows], 1, paste, collapse=' ')    
+    }else{
+      samplesheet$Group <- samplesheet[,group_rows]
+    }
+    index_reorder <- c()
+    # For each group
+    for(eachgroup in unique(samplesheet$Group)){
+      index_tempEigen <- index_eigen[index_eigen %in% rownames(samplesheet[which(samplesheet$Group == eachgroup),])]
+      # we calculate the sample distance to each cluster of samples (in this case nuclei)
+      sampleDist <- dist(df_cluster[index_tempEigen,], method="euclidean")
+      sampleClust <- hclust(sampleDist)
+      index_clust <- index_tempEigen[sampleClust$order]
+      # if(cor(index_clust,c(1:length(index_tempEigen))) < 0){
+      #   index_clust <- rev(index_clust)
+      # }
+      # Final order
+      index_reorder <- c(index_reorder,index_clust)
+    }
+    return(index_reorder)
+}
+
+
+df <- t(upreg_genes_df[,upreg_both])
+df <- df[which(rowSums(df) > 0),]
+df <- df[,which(colSums(df) > 0)]
+index_reorder <- cluster_rows_by_group(df_cluster = df, group_rows = c("seurat_clusters", "condition"), samplesheet = upreg_genes_df[,c("seurat_clusters", "condition"), drop=F])
+
+upreg_genes_df_col_annot <- upreg_genes_df[colnames(df[upreg_both,index_reorder]),c("condition", "seurat_clusters"),drop=F]
+upreg_genes_df_col_annot$condition_cluster <- paste(upreg_genes_df_col_annot$seurat_clusters, upreg_genes_df_col_annot$condition, sep="_")
+upreg_genes_df_col_annot_split <- split(upreg_genes_df_col_annot, f = c(upreg_genes_df_col_annot$condition_cluster))
+
+index_reorder <- rownames(rbind(upreg_genes_df_col_annot_split$`0_LacZ`,
+      upreg_genes_df_col_annot_split$`0_gRNA1`,
+      upreg_genes_df_col_annot_split$`0_gRNA2`,
+      upreg_genes_df_col_annot_split$`1_LacZ`,
+      upreg_genes_df_col_annot_split$`1_gRNA1`,
+      upreg_genes_df_col_annot_split$`1_gRNA2`,
+      upreg_genes_df_col_annot_split$`4_LacZ`,
+      upreg_genes_df_col_annot_split$`4_gRNA1`,
+      upreg_genes_df_col_annot_split$`4_gRNA2`))
+
+gaps <- rep((which(!duplicated(upreg_genes_df[colnames(df[upreg_both,index_reorder]),c("condition", "seurat_clusters"),drop=F]))[-1]-1), 3)
+
+# png("~/Desktop/upreg_genes_crispri_org.png", units = "in", width = 14, height = 7, res=300) 
+# pdf("~/Desktop/upreg_genes_crispri_org.pdf", width = 14, height = 7) 
+pheatmap(df[upreg_both,index_reorder], annotation_col = upreg_genes_df[colnames(df[upreg_both,index_reorder]),c("condition", "seurat_clusters", "cell_line"),drop=F], border_color = NA, show_colnames = F, cluster_cols = F, scale="row", color = colorRampPalette(c("blue", "white", "red"))(100), breaks = seq(-4,4,length.out=100), gaps_col = gaps)
+# dev.off()
+```
+
+
 
 ### Only upregulated in a particular cluster
 
