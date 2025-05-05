@@ -12,6 +12,17 @@ We need to calculate sizeFactors per pseudobulked clusters to normalize TEs usin
 Handy functions to plot featureplots in pseudobulks
 
 ```{r}
+library(data.table)
+library(openxlsx)
+library(DESeq2)
+library(tidyverse)
+library(Seurat)
+library(RColorBrewer)
+library(stringr)
+library(ggpubr)
+library(ggplot2)
+library(ggpubr)
+
 blues <- brewer.pal(9, 'Blues')[3:9]
 pseudobulk_gene <- function(df, gene, minimum = NA, maximum = NA, midpoint = NA, scaled = T){
   tmp <- df[which(df$gene_name == gene),-1]
@@ -102,13 +113,6 @@ pseudobulk_TE <- function(df, TE, minimum = NA, maximum = NA, midpoint = NA, sca
 TEtranscripts' gene quantification per pseudobulked clusters.
 
 ```{r}
-library(data.table)
-library(stringr)
-library(DESeq2)
-library(ggplot2)
-library(dplyr)
-library(RColorBrewer)
-
 path <- "/Volumes/MyPassport/CRISPRi_L1s/10X/3_combinedUMAP_perCluster_res0.1/clusterPipeline/TEcounts/multiple/"
 counts <- list()
 
@@ -151,7 +155,7 @@ samplesheet <- merge(samplesheet, sample_cluster, by="sample_name")
 rownames(samplesheet) <- samplesheet$cluster
 
 unique(samplesheet$sample_name)
-samplesheet_g3 <- samplesheet[which(samplesheet$guide %in% c("gRNA3", "LacZ")),]
+samplesheet_g3 <- samplesheet[which(samplesheet$guide %in% c("gRNA1", "LacZ")),]
 
 ```
 
@@ -169,21 +173,59 @@ for(i in as.character(unique(samplesheet_g3$cluster_number))){
   gene_dds[[i]] <- DESeqDataSetFromMatrix(gene_counts[,rownames(samplesheet_tmp)], samplesheet_tmp, design =  ~ guide)
   gene_dds[[i]]$guide <- relevel(gene_dds[[i]]$guide, "LacZ")
   gene_dds[[i]] <- DESeq(gene_dds[[i]])
-  gene_res[[i]] <- lfcShrink(gene_dds[[i]], "guide_gRNA3_vs_LacZ")
+  gene_res[[i]] <- lfcShrink(gene_dds[[i]], "guide_gRNA1_vs_LacZ")
   gene_res_df[[i]] <- as.data.frame(gene_res[[i]])
   gene_res_df[[i]] <- merge(gene_res_df[[i]], gene_annotation[,1:2], by.x="row.names", by.y="gene_id")
   print(i)
 }
 
 sizeFactors <- data.frame()
+gene_res_df_bound <- data.frame()
 for(i in (names(gene_dds))){
-  sizeFactors <- rbind(sizeFactors, data.frame(sizeFactor = gene_dds[[i]]$sizeFactor, 
+  sizeFactors <- rbind(sizeFactors, data.frame(sizeFactor = gene_dds[[i]]$sizeFactor,
                                                cluster = i,
                                                samples = names(gene_dds[[i]]$sizeFactor)))
+  gene_res_df[[i]]$cluster <- i
+  gene_res_df_bound <- rbind(gene_res_df_bound, gene_res_df[[i]])
 } 
 openxlsx::write.xlsx(sizeFactors, "/Volumes/MyPassport/CRISPRi_L1s/10X/results/tables/gene_sizeFactors_pseudobulk.xlsx")
+```
 
 
+Give some examples from upregulated genes in cluster 0 and 1
+```{r}
+gene_counts_norm <- gene_counts[,rownames(samplesheet_g3)]
+sizeFactors <- sizeFactors[rownames(samplesheet_g3),]
+gene_counts_norm[] <- mapply('/', gene_counts_norm[,rownames(samplesheet_g3)], sizeFactors[rownames(samplesheet_g3),"sizeFactor"])
+gene_counts_norm <- merge(gene_counts_norm, gene_annotation, by.x="row.names", by.y="gene_id")
+
+pseudobulk_gene_box <- function(gene){
+  gene_examples_g3 <- reshape2::melt(gene_counts_norm[which(gene_counts_norm$gene_name %in% gene),c("gene_name", rownames(samplesheet_g3))])
+  gene_examples_g3 <- merge(gene_examples_g3, samplesheet_g3, by.x="variable", by.y="cluster")
+  gene_examples_g3$guide <- factor(gene_examples_g3$guide, levels = c("LacZ", "gRNA1"))
+  tmp <- gene_res_df_bound[which(gene_res_df_bound$gene_name %in% c(gene)),]
+  tmp$group1 <- "gRNA1"
+  tmp$group2 <- "LacZ"
+  tmp$`.y.` <- "value"
+  tmp$p.format <- format(tmp$pvalue, digits = 3, scientific = T)
+  tmp$log2FoldChange <- round(tmp$log2FoldChange, digits = 3)
+  colnames(tmp)[which(colnames(tmp) == "cluster")] <- "cluster_number"
+  
+  return(gene_examples_g3 %>% 
+    filter(gene_name == gene) %>% 
+    ggplot(aes(x=guide, y = value)) + 
+    geom_jitter(aes(color = guide), width = 0.1, size=0.4) + 
+    geom_boxplot(aes(fill = guide), outliers = F, alpha=0.5) + facet_wrap(.~cluster_number, ncol=8) + 
+    stat_pvalue_manual(tmp, y.position = 0.95*max(gene_examples_g3[which(gene_examples_g3$gene_name == gene), "value"]), label = "p.format") + 
+    theme_bw() + labs(x="", y="Normalized pseudobulk expression") + ggtitle(gene))
+}
+
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/boxplot_pseudobulk_examples_fig6.pdf", width = 10, height = 3)
+pseudobulk_gene_box(c("TOX"))
+pseudobulk_gene_box(c("AKAP6"))
+pseudobulk_gene_box(c("ADCY2"))
+dev.off()
 ```
 
 
