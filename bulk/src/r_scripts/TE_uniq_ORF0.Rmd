@@ -1,0 +1,109 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+## Metadata and read count matrices
+Here we load the metadata of the samples (and split them by experiment and guide), and the TE count matrices (`te_counts` with all counts).
+
+To measure the effect of the CRISPRi guides in the antisense transcription initiated by ORF0, I quantified the antisense upstream signal (500bp) of >6kbp L1s. 
+
+So, if we have an L1HS in the forward strand with coordinates 1000-7000, I quantified the signal coming in the reverse strand from 500-1000. And viceversa for the L1s in the reverse strand, I quantified 500bp upstream in forward strand. 
+```{r}
+library(tidyverse)
+library(data.table)
+library(ggplot2)
+library(ggpubr)
+library(stringr)
+library(DESeq2)
+
+samplesheet <- fread("/Volumes/MyPassport/CRISPRi_L1s/bulk/samplesheet_L1crispr.tab", data.table = F, header = T)
+samplesheet <- samplesheet[which(!samplesheet$samples %in% c("AA11_Sai2_lv3775_B_CRISPRa_S11", "AA_Sai2_L1_CRISPRa_LV3776_c_S29")),]
+samplesheet_list <- split(samplesheet, f = list(samplesheet$cell, samplesheet$experiment, samplesheet$guide, samplesheet$seqnum))
+samplesheet_list <- samplesheet_list[sapply(samplesheet_list,nrow)>0] 
+
+samplesheet_comparisons <- list(
+  "hiPS6_crispri_g1" = rbind(samplesheet_list$hiPS6.crispri.g1.CTG_JGJSeq156_159_160truseq, 
+                             samplesheet_list$hiPS6.crispri.LacZ.CTG_JGJSeq156_159_160truseq),
+  "hiPS6_crispri_g3" = rbind(samplesheet_list$hiPS6.crispri.g3.CTG_JGJSeq205_207_208_214_truseq_2023_021,
+                             samplesheet_list$hiPS6.crispri.LacZ.CTG_JGJSeq205_207_208_214_truseq_2023_021),
+  "hiPS48_crispri_g3" = rbind(samplesheet_list$hiPS48.crispri.g3.testdata_ctg_2023_50,
+                              samplesheet_list$hiPS48.crispri.LacZ.testdata_ctg_2023_50))
+
+samplesheet <- samplesheet[which(samplesheet$samples %in% unlist(lapply(samplesheet_comparisons, `[[`, "samples"))),]
+
+path <- "/Volumes/MyPassport/CRISPRi_L1s/bulk/TEcounts/unique/"
+samples <- samplesheet$samples
+
+for(i in 1:length(samples)){
+  sample <- samples[i]
+  if(i == 1){
+    te_counts <- fread(paste(path, sample, "_L1_ORF0_window_count_matrix_2.csv", sep=""), data.table = F)    
+    colnames(te_counts)[ncol(te_counts)] <- sample
+    rownames(te_counts) <- te_counts$Geneid
+    row_order <- rownames(te_counts)
+  }else{
+    tmp <- fread(paste(path, sample, "_L1_ORF0_window_count_matrix_2.csv", sep=""), data.table = F)
+    colnames(tmp)[ncol(tmp)] <- sample
+    rownames(tmp) <- tmp$Geneid
+    te_counts <- cbind(te_counts[row_order,], tmp[row_order,sample,drop=F])
+  }
+}
+
+```
+
+## Normalization and visualization
+
+* Normalization using gene sizeFactors from DESeq2.
+* What you see in the bars is the normalized, log2 transformed means of the two conditions (so, mean across all samples, all elements in the subfamily).
+* The points are the means per sample of all elements in the subfamily. 
+* The error bars are the standard errors of the mean
+* The tests are non parametric (wilcoxon) using the non-transformed normalized data where each point in the test is an element in the subfamily (NOT the mean per samples!)
+```{r}
+sizefactors <- fread("/Volumes/MyPassport/CRISPRi_L1s/bulk/results/tables/gene_sizeFactors.tab", data.table = F)
+colnames(sizefactors) <- c("sample", "sizeFactor")
+rownames(sizefactors) <- sizefactors$sample
+
+te_counts_norm <- te_counts[,samples]
+te_counts_norm[] <- mapply('/', te_counts_norm[,samples], sizefactors[samples,"sizeFactor"])
+
+data_summary <- function(data, varname, groupnames){
+  require(plyr)
+  summary_func <- function(x, col){
+    c(mean = mean(x[[col]], na.rm=TRUE),
+      sd = sd(x[[col]], na.rm=TRUE))
+  }
+  data_sum<-ddply(data, groupnames, .fun=summary_func,
+                  varname)
+  data_sum <- rename(data_sum, c("mean" = varname))
+ return(data_sum)
+}
+
+te_counts_norm$id <- rownames(te_counts_norm)
+orf0_barplots <- list()
+for(L1 in c("L1HS", "L1PA2", "L1PA3", "L1PA4")){
+  te_counts_norm_L1_tmp <- reshape2::melt(te_counts_norm[which(startsWith(te_counts_norm$id, L1)),])
+  te_counts_norm_L1_tmp <- merge(te_counts_norm_L1_tmp, samplesheet, by.x="variable", by.y="samples")
+  max_lim <- mean(x = te_counts_norm_L1_tmp$value) + (sd(te_counts_norm_L1_tmp$value)/sqrt(length(te_counts_norm_L1_tmp$value)))*2
+  te_counts_norm_L1_tmp$comparison <- ifelse(te_counts_norm_L1_tmp$variable %in% samplesheet_comparisons$hiPS6_crispri_g1$samples, "hiPS6_crispri_g1", 
+                                             ifelse(te_counts_norm_L1_tmp$variable %in% samplesheet_comparisons$hiPS6_crispri_g3$samples, "hiPS6_crispri_g3", 
+                                             ifelse(te_counts_norm_L1_tmp$variable %in% samplesheet_comparisons$hiPS48_crispri_g3$samples, "hiPS48_crispri_g3", "other?")))
+  
+  orf0_barplots[[L1]] <- 
+    ggplot() +
+      geom_bar(data = te_counts_norm_L1_tmp, aes(x=condition, y=log2(value+1)), stat='summary', fun="mean") +
+      stat_summary(data = te_counts_norm_L1_tmp, aes(x=condition, y=log2(value+1), group_by=variable), geom = "point", fun.y = "mean", col = "black")  +
+      stat_summary(data = te_counts_norm_L1_tmp, aes(x=condition, y=log2(value+1)), fun.data = mean_se, geom = "errorbar", width=0.2) +
+    theme_bw() + labs(x="", y="log2(Avg expression + 1)", fill="") + 
+    ggtitle(paste(L1, "ORF0 antisense signal")) + facet_wrap(.~comparison) +
+      stat_compare_means(data = te_counts_norm_L1_tmp, aes(x=condition, y=value), method = "wilcox", label.y = 0.5, label.x.npc = 0.2, paired=F) +
+      theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), plot.subtitle = element_text(size = 6))
+  
+}
+
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/bulk/results/plots/barplots_ORF0_readthrough_FL_L1PAs.pdf", height = 4, width = 7)
+orf0_barplots
+dev.off()
+```
+
