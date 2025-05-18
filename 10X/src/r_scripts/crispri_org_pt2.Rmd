@@ -190,12 +190,12 @@ downreg_0 <- fread("/Volumes/MyPassport/CRISPRi_L1s/10X/results/tables/downreg_c
 downreg_1 <- fread("/Volumes/MyPassport/CRISPRi_L1s/10X/results/tables/downreg_cluster_1.txt", header = F, data.table = F)
 
 # At least an increase of 20% (log2(1.2) = 0.26) in the base (g1 hiPS6), and the same direction in the rest of the experiments
-upreg_0_threshold <- upreg_0[which(deas_clusters$g1_hiPS6$`0`[upreg_0$V1, "0_g1_hiPS6_avg_log2FC"] > 0.25 &
+upreg_0_threshold <- upreg_0[which((deas_clusters$g1_hiPS6$`0`[upreg_0$V1, "0_g1_hiPS6_avg_log2FC"] > 0.25) &
                                      deas_clusters$g2_hiPS6$`0`[upreg_0$V1, "avg_log2FC"] > 0 &
                                      deas_clusters$g1_hiPS48$`0`[upreg_0$V1, "avg_log2FC"] > 0 &
                                      deas_clusters$g2_hiPS48$`0`[upreg_0$V1, "avg_log2FC"] > 0),]
 
-upreg_1_threshold <- upreg_1[which(deas_clusters$g1_hiPS6$`1`[upreg_1$V1, "1_g1_hiPS6_avg_log2FC"] > 0.25 &
+upreg_1_threshold <- upreg_1[which((deas_clusters$g1_hiPS6$`1`[upreg_1$V1, "1_g1_hiPS6_avg_log2FC"] > 0.25) &
                                      deas_clusters$g2_hiPS6$`1`[upreg_1$V1, "avg_log2FC"] > 0 &
                                      deas_clusters$g1_hiPS48$`1`[upreg_1$V1, "avg_log2FC"] > 0 &
                                      deas_clusters$g2_hiPS48$`1`[upreg_1$V1, "avg_log2FC"] > 0),]
@@ -205,17 +205,64 @@ upreg_both <- unique(upreg_0_threshold[which(upreg_0_threshold %in% upreg_1_thre
 
 ```
 
+## Heatmap with upregulated genes 
+
+Average per cell type
+
+```{r}
+upreg_both_df <- FetchData(crispri_org, c("orig.ident","condition_cell_line_celltype", upreg_both))
+
+upreg_both_df_mean_sample <- aggregate(upreg_both_df[,upreg_both], by=list(upreg_both_df$orig.ident, upreg_both_df$condition_cell_line_celltype), FUN=mean)
+upreg_both_df_mean_sample$group <- paste(upreg_both_df_mean_sample$Group.1, upreg_both_df_mean_sample$Group.2)
+rownames(upreg_both_df_mean_sample) <- upreg_both_df_mean_sample$group
+upreg_both_df_mean_sample <- t(upreg_both_df_mean_sample[,upreg_both])
+
+library(pheatmap)
+colannot_endothelial <- data.frame(sample=sapply(str_split(colnames(upreg_both_df_mean_sample_endothelial), " "), `[[`, 1),
+           colname = colnames(upreg_both_df_mean_sample_endothelial))
+colannot_endothelial <- merge(colannot_endothelial, samples_metadata )
+rownames(colannot_endothelial) <- colannot_endothelial$colname
+
+colannot_npcs <- data.frame(sample=sapply(str_split(colnames(upreg_both_df_mean_sample_npcs), " "), `[[`, 1),
+           colname = colnames(upreg_both_df_mean_sample_npcs))
+colannot_npcs <- merge(colannot_npcs, samples_metadata )
+rownames(colannot_npcs) <- colannot_npcs$colname
+
+colannot_neurons <- data.frame(sample=sapply(str_split(colnames(upreg_both_df_mean_sample_neurons), " "), `[[`, 1),
+           colname = colnames(upreg_both_df_mean_sample_neurons))
+colannot_neurons <- merge(colannot_neurons, samples_metadata )
+rownames(colannot_neurons) <- colannot_neurons$colname
+
+upreg_both_df_mean_sample_npcs <- upreg_both_df_mean_sample[,colnames(upreg_both_df_mean_sample)[which(endsWith(colnames(upreg_both_df_mean_sample), "NPCs"))]]
+
+upreg_both_df_mean_sample_neurons <- upreg_both_df_mean_sample[,colnames(upreg_both_df_mean_sample)[which(endsWith(colnames(upreg_both_df_mean_sample), "neurons"))]]
+
+upreg_both_df_mean_sample_endothelial <- upreg_both_df_mean_sample[,colnames(upreg_both_df_mean_sample)[which(endsWith(colnames(upreg_both_df_mean_sample), "Endothelial"))]]
+
+tmp <- pheatmap(log2(upreg_both_df_mean_sample_npcs+1), cluster_cols = F, show_colnames = F, annotation_col = colannot_npcs[colnames(upreg_both_df_mean_sample_npcs),c(3,4)], scale="row", main = "NPCs", color = colorRampPalette(c("blue", "white", "red"))(100), breaks = seq(-4,4,length.out=100))
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/upreg_genes_crispri_org_log2fc025_nopadj_average.pdf", height = 7, width = 5)
+pheatmap(log2(upreg_both_df_mean_sample_npcs[tmp$tree_row$labels,]+1), cluster_cols = F, show_colnames = F, annotation_col = colannot_npcs[colnames(upreg_both_df_mean_sample_npcs),c(3,4)], scale="row", main = "NPCs", color = colorRampPalette(c("blue", "white", "red"))(100), breaks = seq(-4,4,length.out=100), cluster_rows = F)
+
+pheatmap(log2(upreg_both_df_mean_sample_neurons[tmp$tree_row$labels,]+1), cluster_cols = F, show_colnames = F, annotation_col = colannot_neurons[colnames(upreg_both_df_mean_sample_neurons),c(3,4)], scale="row", main = "Neurons", color = colorRampPalette(c("blue", "white", "red"))(100), breaks = seq(-4,4,length.out=100), cluster_rows = F)
+
+pheatmap(log2(upreg_both_df_mean_sample_endothelial[tmp$tree_row$labels,]+1), cluster_cols = F, show_colnames = F, annotation_col = colannot_endothelial[colnames(upreg_both_df_mean_sample_endothelial),c(3,4)], scale="row", main = "Endothelial", color = colorRampPalette(c("blue", "white", "red"))(100), breaks = seq(-4,4,length.out=100), cluster_rows = F)
+
+dev.off()
+```
+
+
 ### Downregulated
 
 So, the files read here are based on the results of hiPS6 organoids. We need to find the genes that have at least a decrease of 20% (log2(1.2) = 0.26) in the base experiment (g1 hiPS6), and the same direction in the rest of the experiments (log2FC < 0).
 
 ```{r}
-downreg_0_threshold <- downreg_0[which(deas_clusters$g1_hiPS6$`0`[downreg_0$V1, "0_g1_hiPS6_avg_log2FC"] < -0.25 &
+downreg_0_threshold <- downreg_0[which((deas_clusters$g1_hiPS6$`0`[downreg_0$V1, "0_g1_hiPS6_avg_log2FC"] < -0.25) &
                                      deas_clusters$g2_hiPS6$`0`[downreg_0$V1, "avg_log2FC"] < 0 &
                                      deas_clusters$g1_hiPS48$`0`[downreg_0$V1, "avg_log2FC"] < 0 &
                                      deas_clusters$g2_hiPS48$`0`[downreg_0$V1, "avg_log2FC"] < 0),]
 
-downreg_1_threshold <- downreg_1[which(deas_clusters$g1_hiPS6$`1`[downreg_1$V1, "1_g1_hiPS6_avg_log2FC"] < -0.25 &
+downreg_1_threshold <- downreg_1[which((deas_clusters$g1_hiPS6$`1`[downreg_1$V1, "1_g1_hiPS6_avg_log2FC"] < -0.25) &
                                      deas_clusters$g2_hiPS6$`1`[downreg_1$V1, "avg_log2FC"] < 0 &
                                      deas_clusters$g1_hiPS48$`1`[downreg_1$V1, "avg_log2FC"] < 0 &
                                      deas_clusters$g2_hiPS48$`1`[downreg_1$V1, "avg_log2FC"] < 0),]
@@ -224,15 +271,15 @@ downreg_both <- unique(downreg_0_threshold[which(downreg_0_threshold %in% downre
                      downreg_1_threshold[which(downreg_1_threshold %in% downreg_0_threshold)])
 ```
 
-
+## Upregulated genes heatmaps
 ```{r}
 library(pheatmap)
-upreg_genes_df <- FetchData(crispri_org_join, c(upreg_both, "condition_cluster","condition", "seurat_clusters", "cell_line", "batch"))
+upreg_genes_df <- FetchData(crispri_org_join, c(upreg_both, "condition_cluster","condition", "celltype", "seurat_clusters", "cell_line", "batch"))
 
-upreg_genes_df <- upreg_genes_df %>% 
-  filter(condition_cluster %in% c("LacZ_0", "LacZ_1", "LacZ_4",
-                                  "gRNA1_0", "gRNA1_1", "gRNA1_4",
-                                  "gRNA2_0", "gRNA2_1", "gRNA2_4")) 
+# upreg_genes_df <- upreg_genes_df %>% 
+#   filter(condition_cluster %in% c("LacZ_0", "LacZ_1", "LacZ_4",
+#                                   "gRNA1_0", "gRNA1_1", "gRNA1_4",
+#                                   "gRNA2_0", "gRNA2_1", "gRNA2_4")) 
 
 cluster_rows_by_group <- function(df_cluster, group_rows, samplesheet){
   # Calculate eigen values
