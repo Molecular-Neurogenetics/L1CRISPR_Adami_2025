@@ -205,12 +205,114 @@ upreg_both <- unique(upreg_0_threshold[which(upreg_0_threshold %in% upreg_1_thre
 
 ```
 
+## Overlap of downregulated genes between cell lines and guides
+```{r}
+library(UpSetR)
+library(grid)
+downreg_g1_hiPS6_0 <- deas_clusters$g1_hiPS6$`0`[which(deas_clusters$g1_hiPS6$`0`$`0_g1_hiPS6_avg_log2FC` < -0.25), "gene"]
+downreg_g2_hiPS6_0 <- deas_clusters$g2_hiPS6$`0`[which(deas_clusters$g2_hiPS6$`0`$avg_log2FC < -0.25), "gene"]
+downreg_g1_hiPS6_1 <- deas_clusters$g1_hiPS6$`1`[which(deas_clusters$g1_hiPS6$`1`$`1_g1_hiPS6_avg_log2FC` < -0.25), "gene"]
+downreg_g2_hiPS6_1 <- deas_clusters$g2_hiPS6$`1`[which(deas_clusters$g2_hiPS6$`1`$avg_log2FC < -0.25), "gene"]
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/upset_downreg_genes.pdf")
+upset(fromList(list("g1_hiPS6_0" = downreg_g1_hiPS6_0,
+                    "g2_hiPS6_0" = downreg_g2_hiPS6_0,
+                    "g1_hiPS6_1" = downreg_g1_hiPS6_1,
+                    "g2_hiPS6_1" = downreg_g2_hiPS6_1)))
+grid.text("Downregulated genes in hiPS6 L1-CRISPRi (per NPC cluster)",x = 0.65, y=0.95, gp=gpar(fontsize=10))
+
+upset(fromList(list("g1_hiPS6" = intersect(downreg_g1_hiPS6_0, 
+                                           downreg_g1_hiPS6_1),
+                    "g2_hiPS6" = intersect(downreg_g2_hiPS6_0,
+                                           downreg_g2_hiPS6_1)))) 
+grid.text("Downregulated genes in hiPS6 L1-CRISPRi\n(intersect of both NPC clusters)",x = 0.65, y=0.95, gp=gpar(fontsize=10))
+
+downreg_g1_hiPS48_0 = deas_clusters$g1_hiPS48$`0`[which(deas_clusters$g1_hiPS48$`0`$avg_log2FC < -0.25), "gene"]
+downreg_g2_hiPS48_0 = deas_clusters$g2_hiPS48$`0`[which(deas_clusters$g2_hiPS48$`0`$avg_log2FC < -0.25), "gene"]
+downreg_g1_hiPS48_1 = deas_clusters$g1_hiPS48$`1`[which(deas_clusters$g1_hiPS48$`1`$avg_log2FC < -0.25), "gene"]
+downreg_g2_hiPS48_1 = deas_clusters$g2_hiPS48$`1`[which(deas_clusters$g2_hiPS48$`1`$avg_log2FC < -0.25), "gene"]
+
+upset(fromList(list("g1_hiPS48_0" = downreg_g1_hiPS48_0,
+                    "g2_hiPS48_0" = downreg_g2_hiPS48_0,
+                    "g1_hiPS48_1" = downreg_g1_hiPS48_1,
+                    "g2_hiPS48_1" = downreg_g2_hiPS48_1)))
+grid.text("Downregulated genes in hiPS48 L1-CRISPRi (per NPC cluster)",x = 0.65, y=0.95, gp=gpar(fontsize=10))
+
+upset(fromList(list("g1_hiPS48" = intersect(downreg_g1_hiPS48_0, 
+                                            downreg_g1_hiPS48_1),
+                    "g2_hiPS48" = intersect(downreg_g2_hiPS48_0,
+                                            downreg_g2_hiPS48_1))))
+grid.text("Downregulated genes in hiPS48 L1-CRISPRi\n(intersect of both NPC clusters)",x = 0.65, y=0.95, gp=gpar(fontsize=10))
+
+upset(fromList(list("g1" = intersect(intersect(downreg_g1_hiPS48_0, 
+                                               downreg_g1_hiPS48_1),
+                                     intersect(downreg_g1_hiPS6_0, 
+                                               downreg_g1_hiPS6_1)),
+                    "g2" = intersect(intersect(downreg_g2_hiPS48_0,
+                                               downreg_g2_hiPS48_1),
+                                     intersect(downreg_g2_hiPS6_0,
+                                               downreg_g2_hiPS6_1)))))
+grid.text("Downregulated genes in L1-CRISPRi\n(intersect of both cell lines and NPC clusters)",x = 0.65, y=0.95, gp=gpar(fontsize=10))
+dev.off()
+
+```
+
+## Overlap of upregulated genes between cell lines and guides
+```{r}
+upreg_g1_hiPS6_0 <- deas_clusters$g1_hiPS6$`0`[which(deas_clusters$g1_hiPS6$`0`$`0_g1_hiPS6_avg_log2FC` > 0.25), "gene"]
+upreg_g2_hiPS6_0 <- deas_clusters$g2_hiPS6$`0`[which(deas_clusters$g2_hiPS6$`0`$avg_log2FC > 0.25), "gene"]
+upreg_g1_hiPS6_1 <- deas_clusters$g1_hiPS6$`1`[which(deas_clusters$g1_hiPS6$`1`$`1_g1_hiPS6_avg_log2FC` > 0.25), "gene"]
+upreg_g2_hiPS6_1 <- deas_clusters$g2_hiPS6$`1`[which(deas_clusters$g2_hiPS6$`1`$avg_log2FC > 0.25), "gene"]
+
+pdf("/Volumes/MyPassport/CRISPRi_L1s/10X/results/plots/upset_upreg_genes.pdf")
+upset(fromList(list("g1_hiPS6_0" = upreg_g1_hiPS6_0,
+                    "g2_hiPS6_0" = upreg_g2_hiPS6_0,
+                    "g1_hiPS6_1" = upreg_g1_hiPS6_1,
+                    "g2_hiPS6_1" = upreg_g2_hiPS6_1)))
+grid.text("Upregulated genes in hiPS6 L1-CRISPRi (per NPC cluster)",x = 0.65, y=0.95, gp=gpar(fontsize=10))
+
+upset(fromList(list("g1_hiPS6" = intersect(upreg_g1_hiPS6_0, 
+                                           upreg_g1_hiPS6_1),
+                    "g2_hiPS6" = intersect(upreg_g2_hiPS6_0,
+                                           upreg_g2_hiPS6_1)))) 
+grid.text("Upregulated genes in hiPS6 L1-CRISPRi\n(intersect of both NPC clusters)",x = 0.65, y=0.95, gp=gpar(fontsize=10))
+
+upreg_g1_hiPS48_0 = deas_clusters$g1_hiPS48$`0`[which(deas_clusters$g1_hiPS48$`0`$avg_log2FC > 0.25), "gene"]
+upreg_g2_hiPS48_0 = deas_clusters$g2_hiPS48$`0`[which(deas_clusters$g2_hiPS48$`0`$avg_log2FC > 0.25), "gene"]
+upreg_g1_hiPS48_1 = deas_clusters$g1_hiPS48$`1`[which(deas_clusters$g1_hiPS48$`1`$avg_log2FC > 0.25), "gene"]
+upreg_g2_hiPS48_1 = deas_clusters$g2_hiPS48$`1`[which(deas_clusters$g2_hiPS48$`1`$avg_log2FC > 0.25), "gene"]
+
+upset(fromList(list("g1_hiPS48_0" = upreg_g1_hiPS48_0,
+                    "g2_hiPS48_0" = upreg_g2_hiPS48_0,
+                    "g1_hiPS48_1" = upreg_g1_hiPS48_1,
+                    "g2_hiPS48_1" = upreg_g2_hiPS48_1)))
+grid.text("Upregulated genes in hiPS48 L1-CRISPRi (per NPC cluster)",x = 0.65, y=0.95, gp=gpar(fontsize=10))
+
+upset(fromList(list("g1_hiPS48" = intersect(upreg_g1_hiPS48_0, 
+                                            upreg_g1_hiPS48_1),
+                    "g2_hiPS48" = intersect(upreg_g2_hiPS48_0,
+                                            upreg_g2_hiPS48_1))))
+grid.text("Upregulated genes in hiPS48 L1-CRISPRi\n(intersect of both NPC clusters)",x = 0.65, y=0.95, gp=gpar(fontsize=10))
+
+upset(fromList(list("g1" = intersect(intersect(upreg_g1_hiPS48_0, 
+                                               upreg_g1_hiPS48_1),
+                                     intersect(upreg_g1_hiPS6_0, 
+                                               upreg_g1_hiPS6_1)),
+                    "g2" = intersect(intersect(upreg_g2_hiPS48_0,
+                                               upreg_g2_hiPS48_1),
+                                     intersect(upreg_g2_hiPS6_0,
+                                               upreg_g2_hiPS6_1)))))
+grid.text("Upregulated genes in L1-CRISPRi\n(intersect of both cell lines and NPC clusters)",x = 0.65, y=0.95, gp=gpar(fontsize=10))
+dev.off()
+```
+
+
 ## Heatmap with upregulated genes 
 
 Average per cell type
 
 ```{r}
-upreg_both_df <- FetchData(crispri_org, c("orig.ident","condition_cell_line_celltype", upreg_both))
+upreg_both_df <- FetchData(crispri_org, c("orig.ident", "condition_cell_line_celltype", upreg_both))
 
 upreg_both_df_mean_sample <- aggregate(upreg_both_df[,upreg_both], by=list(upreg_both_df$orig.ident, upreg_both_df$condition_cell_line_celltype), FUN=mean)
 upreg_both_df_mean_sample$group <- paste(upreg_both_df_mean_sample$Group.1, upreg_both_df_mean_sample$Group.2)
@@ -218,6 +320,12 @@ rownames(upreg_both_df_mean_sample) <- upreg_both_df_mean_sample$group
 upreg_both_df_mean_sample <- t(upreg_both_df_mean_sample[,upreg_both])
 
 library(pheatmap)
+upreg_both_df_mean_sample_npcs <- upreg_both_df_mean_sample[,colnames(upreg_both_df_mean_sample)[which(endsWith(colnames(upreg_both_df_mean_sample), "NPCs"))]]
+
+upreg_both_df_mean_sample_neurons <- upreg_both_df_mean_sample[,colnames(upreg_both_df_mean_sample)[which(endsWith(colnames(upreg_both_df_mean_sample), "neurons"))]]
+
+upreg_both_df_mean_sample_endothelial <- upreg_both_df_mean_sample[,colnames(upreg_both_df_mean_sample)[which(endsWith(colnames(upreg_both_df_mean_sample), "Endothelial"))]]
+
 colannot_endothelial <- data.frame(sample=sapply(str_split(colnames(upreg_both_df_mean_sample_endothelial), " "), `[[`, 1),
            colname = colnames(upreg_both_df_mean_sample_endothelial))
 colannot_endothelial <- merge(colannot_endothelial, samples_metadata )
